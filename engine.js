@@ -66,7 +66,8 @@ const Engine = (() => {
   }
 
   function needsDiagnostic() {
-    return state.size === 0;
+    // scouting continues (across reloads/days) until the frontier is actually mapped
+    return state.size < Math.floor(T.diagnosticProbes * 0.8);
   }
 
   // ---------- priority ladder ----------
@@ -226,7 +227,9 @@ const Engine = (() => {
     return (me.budget_cents || 0) - committed;
   }
 
-  async function payForMastery(w) {
+  async function payForMastery(w, sessionRow) {
+    // money moves only in the one primary drill session per day
+    if (!sessionRow || !sessionRow.is_primary || sessionRow.kind !== 'drill') return 0;
     if (me.role !== 'student' || !me.budget_cents) return 0;
     const base = T.payCents[w.tier] || 0;
     if (!base) return 0;
@@ -303,7 +306,7 @@ const Engine = (() => {
           };
           if (qualifies) {
             masteredNow = true;
-            paidCents = await payForMastery(w);
+            paidCents = await payForMastery(w, sessionRow);
             next.earned_cents = (cur.earned_cents || 0) + paidCents;
           }
           await upsertWordState(next);
@@ -345,15 +348,16 @@ const Engine = (() => {
   // ---------- session lifecycle ----------
   async function openSession(kind) {
     const day = todayStr();
-    const { data: existing } = await db.from('wc_sessions').select('*').eq('user_id', me.id).eq('day', day).eq('is_primary', true).maybeSingle();
-    if (existing && existing.completed && kind === 'drill') {
-      const { data, error } = await db.from('wc_sessions').insert({ user_id: me.id, day, is_primary: false, kind }).select().single();
-      if (error) throw error; return { row: data, paying: false };
-    }
-    if (existing) return { row: existing, paying: existing.is_primary };
-    const { data, error } = await db.from('wc_sessions').insert({ user_id: me.id, day, is_primary: true, kind }).select().single();
+    const { data: rows, error: qerr } = await db.from('wc_sessions').select('*').eq('user_id', me.id).eq('day', day).order('id');
+    if (qerr) throw qerr;
+    // resume only an incomplete session of the SAME kind
+    const open = (rows || []).find(s => !s.completed && s.kind === kind);
+    if (open) return { row: open, paying: open.is_primary };
+    const hasPrimary = (rows || []).some(s => s.is_primary);
+    const isPrimary = !hasPrimary;
+    const { data, error } = await db.from('wc_sessions').insert({ user_id: me.id, day, is_primary: isPrimary, kind }).select().single();
     if (error) throw error;
-    return { row: data, paying: true };
+    return { row: data, paying: isPrimary };
   }
 
   async function closeSession(row, { xp, focus, durationS }) {

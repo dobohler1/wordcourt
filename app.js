@@ -91,6 +91,7 @@
     const built = kind === 'diagnostic' ? Engine.buildDiagnostic() : Engine.buildSession();
     session = { row, paying, kind, items: built.items, idx: 0, xp: 0, engaged: 0, answered: 0, rushedCount: 0, misses: [], mastered: [], paid: 0, startedAt: Date.now() };
     for (const v of document.querySelectorAll('.tab-view')) v.hidden = true;
+    $('#tabs').hidden = true;               // no escaping mid-session
     $('#tab-view-session').hidden = false;
     renderItem();
   }
@@ -139,6 +140,7 @@
   async function answerFlashcard(card, item, opt, btn) {
     const latency = Date.now() - itemShownAt;
     card.querySelectorAll('.choice').forEach(b => b.disabled = true);
+    if (session.kind !== 'diagnostic') session.answered++;
     const correct = opt.id === item.answerId;
     btn.classList.add(correct ? 'correct' : 'wrong');
     const res = session.kind === 'diagnostic'
@@ -345,7 +347,9 @@
     card.append(stats);
     if (session.kind === 'diagnostic') {
       const c = Engine.wordCounts();
-      card.append(el('p', null, `Your map: <b>${c.known}</b> words you already own · <b>${c.learning + c.review}</b> to conquer first · ${c.untouched} more waiting behind them. Tomorrow the real 15 minutes begin.`));
+      const more = Engine.needsDiagnostic();
+      card.append(el('p', null, `Your map so far: <b>${c.known}</b> words you already own · <b>${c.learning + c.review}</b> to conquer first.` +
+        (more ? ' Scouting continues next session — a few more words to map.' : ' Map complete — tomorrow the real 15 minutes begin.')));
     }
     if (session.misses.length) {
       card.append(el('h2', null, 'What goes back in the ladder'));
@@ -358,7 +362,7 @@
     }
     const row = el('div', 'center-actions');
     const done = el('button', 'btn primary', 'Done for today');
-    done.addEventListener('click', () => { session = null; showTab('today'); });
+    done.addEventListener('click', () => { session = null; $('#tabs').hidden = false; showTab('today'); });
     row.append(done); card.append(row);
     host.append(card);
     Engine.streak().then(n => { $('#streak-chip').textContent = '🔥 ' + n; });
