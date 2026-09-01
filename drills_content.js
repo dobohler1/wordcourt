@@ -100,18 +100,232 @@ window.WORDCOURT_DRILLS = {
       ],
     },
     {
-      id: 'sep1_d1_review', day: 'Day 1 · Tue Sept 1', availableFrom: '2026-09-01', order: 40,
-      title: 'Review Set — Test Innovators', subtitle: 'Rework each question cold on the platform, then mark it', scoring: 'none', timeLimitS: null,
-      intro: [{ type: 'directions', html: '<b>Directions:</b> Open each question on Test Innovators and rework it <b>cold</b> — solution closed, from the question alone. Mark ✓ or ✗ here. For each ✗, read the platform\'s solution and write the error-log line when prompted.' }],
-      items: [
-        { id: 'd1r1', type: 'checklist', skills: ['answer-asked', 'chart-read'], prompt: 'SSAT Upper #3 · Section 1 · Question 20' },
-        { id: 'd1r2', type: 'checklist', skills: ['answer-asked', 'chart-read'], prompt: 'SSAT Upper #3 · Section 1 · Question 21' },
-        { id: 'd1r3', type: 'checklist', skills: ['estimation'], prompt: 'SSAT Upper #3 · Section 4 · Question 4' },
-        { id: 'd1r4', type: 'checklist', skills: ['answer-asked'], prompt: 'ISEE Upper #2 · Quantitative Reasoning · Question 12' },
-        { id: 'd1r5', type: 'checklist', skills: ['stats-median-grouped'], prompt: 'ISEE Upper #2 · Mathematics Achievement · Question 33' },
-        { id: 'd1r6', type: 'checklist', skills: ['stats-weighted-mean'], prompt: 'ISEE Upper #2 · Mathematics Achievement · Question 34' },
-        { id: 'd1r7', type: 'checklist', skills: ['stats-median-grouped'], prompt: 'ISEE Upper #2 · Mathematics Achievement · Question 35' },
+      "id": "sep1_d1_review",
+      "day": "Day 1 · Tue Sept 1",
+      "availableFrom": "2026-09-01",
+      "order": 40,
+      "title": "Review Set",
+      "subtitle": "7 questions · multi-step and grouped-data statistics · ISEE rules",
+      "scoring": "isee",
+      "timeLimitS": null,
+      "intro": [
+        {
+          "type": "directions",
+          "html": "<b>Directions:</b> Each question has four or five suggested answers. Work each problem on scratch paper, then select the best answer. Answer every question. After computing, re-read the last sentence of the question before choosing."
+        }
       ],
+      "items": [
+        {
+          "id": "d1rv1",
+          "type": "mc",
+          "skills": [
+            "chart-read",
+            "answer-asked"
+          ],
+          "prompt": "A student recorded how a full day was spent: sleeping 35%, school 25%, homework 12%, sports 8%, other 20%. What fractional part of the day was spent sleeping or playing sports?",
+          "choices": [
+            [
+              "A",
+              "$\\tfrac{7}{20}$"
+            ],
+            [
+              "B",
+              "$\\tfrac{43}{100}$"
+            ],
+            [
+              "C",
+              "$\\tfrac{12}{25}$"
+            ],
+            [
+              "D",
+              "$\\tfrac{3}{5}$"
+            ],
+            [
+              "E",
+              "$\\tfrac{9}{25}$"
+            ]
+          ],
+          "answer": "B",
+          "explain": "Sleeping or sports $= 35\\% + 8\\% = 43\\% = \\tfrac{43}{100}$. Choice (A) is sleeping alone — the question asks for both categories combined."
+        },
+        {
+          "id": "d1rv2",
+          "type": "mc",
+          "skills": [
+            "chart-read",
+            "answer-asked"
+          ],
+          "prompt": "Using the same record (sleeping 35%, school 25%, homework 12%, sports 8%, other 20%): if 96 minutes were spent on homework, what was the difference between the number of minutes spent at school and the number of minutes spent on sports?",
+          "choices": [
+            [
+              "A",
+              "136"
+            ],
+            [
+              "B",
+              "200"
+            ],
+            [
+              "C",
+              "64"
+            ],
+            [
+              "D",
+              "264"
+            ],
+            [
+              "E",
+              "96"
+            ]
+          ],
+          "answer": "A",
+          "explain": "Homework is 12%, so the whole record is $96 \\div 0.12 = 800$ minutes. School $= 0.25 \\times 800 = 200$; sports $= 0.08 \\times 800 = 64$; difference $= 136$. Choices (B) and (C) are the two quantities before subtracting."
+        },
+        {
+          "id": "d1rv3",
+          "type": "mc",
+          "skills": [
+            "estimation"
+          ],
+          "prompt": "The table shows the prices of six items. What is the best estimate of the total cost of the six items?<table class=\"dtable\"><tr><th>Item</th><td>notebook</td><td>pen set</td><td>eraser</td><td>binder</td><td>ruler</td><td>markers</td></tr><tr><th>Price</th><td>\\$1.95</td><td>\\$3.10</td><td>\\$0.89</td><td>\\$4.05</td><td>\\$2.15</td><td>\\$5.90</td></tr></table>",
+          "choices": [
+            [
+              "A",
+              "\\$15"
+            ],
+            [
+              "B",
+              "\\$16"
+            ],
+            [
+              "C",
+              "\\$18"
+            ],
+            [
+              "D",
+              "\\$20"
+            ],
+            [
+              "E",
+              "\\$22"
+            ]
+          ],
+          "answer": "C",
+          "explain": "Round each price to the nearest dollar: $2 + 3 + 1 + 4 + 2 + 6 = 18$. Rounding each item once, in the right direction, keeps the estimate close (the exact total is \\$18.04)."
+        },
+        {
+          "id": "d1rv4",
+          "type": "mc",
+          "skills": [
+            "answer-asked"
+          ],
+          "prompt": "If $\\tfrac{1}{5}m + \\tfrac{1}{5}n = 3$, what is the value of $4m + 4n$?",
+          "choices": [
+            [
+              "A",
+              "15"
+            ],
+            [
+              "B",
+              "20"
+            ],
+            [
+              "C",
+              "60"
+            ],
+            [
+              "D",
+              "12"
+            ]
+          ],
+          "answer": "C",
+          "explain": "Multiply by 5: $m + n = 15$. The question asks for $4(m + n) = 60$. Choice (A) is the intermediate value $m + n$."
+        },
+        {
+          "id": "d1rv5",
+          "type": "mc",
+          "skills": [
+            "stats-median-grouped"
+          ],
+          "prompt": "The table shows the number of pets owned by each of 21 students. What is the median number of pets?<table class=\"dtable\"><tr><th>Pets</th><td>0</td><td>1</td><td>2</td><td>3</td><td>4</td></tr><tr><th>Students</th><td>4</td><td>7</td><td>5</td><td>3</td><td>2</td></tr></table>",
+          "choices": [
+            [
+              "A",
+              "1"
+            ],
+            [
+              "B",
+              "1.5"
+            ],
+            [
+              "C",
+              "2"
+            ],
+            [
+              "D",
+              "2.5"
+            ]
+          ],
+          "answer": "A",
+          "explain": "$n = 21$, median is the 11th value. Cumulative: 0 pets → positions 1–4; 1 pet → 5–11. The 11th value is 1. Choice (C) is the middle of the label axis, not the middle of the data."
+        },
+        {
+          "id": "d1rv6",
+          "type": "mc",
+          "skills": [
+            "stats-weighted-mean"
+          ],
+          "prompt": "A student's four quiz scores are 78, 84, 90, and 88. The final exam counts twice as much as a quiz. What final-exam score raises the student's mean by 2 points?",
+          "choices": [
+            [
+              "A",
+              "87"
+            ],
+            [
+              "B",
+              "89"
+            ],
+            [
+              "C",
+              "91"
+            ],
+            [
+              "D",
+              "93"
+            ]
+          ],
+          "answer": "C",
+          "explain": "Current mean $= 340 \\div 4 = 85$; target 87. Total weight 6, required total $87 \\times 6 = 522$; $340 + 2x = 522 \\Rightarrow x = 91$."
+        },
+        {
+          "id": "d1rv7",
+          "type": "mc",
+          "skills": [
+            "stats-median-grouped"
+          ],
+          "prompt": "The frequency table shows the number of customers each of 11 employees helped in one hour. What is the median number of customers helped?<table class=\"dtable\"><tr><th>Customers helped</th><td>2</td><td>3</td><td>5</td><td>7</td></tr><tr><th>Employees</th><td>2</td><td>3</td><td>4</td><td>2</td></tr></table>",
+          "choices": [
+            [
+              "A",
+              "4"
+            ],
+            [
+              "B",
+              "4.25"
+            ],
+            [
+              "C",
+              "5"
+            ],
+            [
+              "D",
+              "6"
+            ]
+          ],
+          "answer": "C",
+          "explain": "$n = 11$, median is the 6th value. Cumulative: 2 → 1–2; 3 → 3–5; 5 → 6–9. The 6th value is 5. Choice (B) averages the labels, which is not a statistic of the data."
+        }
+      ]
     },
 
     /* ==================== DAY 2 ==================== */
@@ -165,64 +379,1594 @@ window.WORDCOURT_DRILLS = {
       ],
     },
     {
-      id: 'sep1_d2_review', day: 'Day 2 · Wed Sept 2', availableFrom: '2026-09-02', order: 70,
-      title: 'Quantitative Review Set — Test Innovators', subtitle: 'Every listed question, cold · ~45 minutes', scoring: 'none', timeLimitS: null,
-      intro: [{ type: 'directions', html: '<b>Directions:</b> Rework every question below <b>cold</b> on the platform — solution closed, from the question alone. Mark ✓ or ✗ here as you go. For each ✗: read the platform\'s solution and write the error-log line when prompted. Questions marked ✗ become Thursday\'s second-pass list automatically. The ISEE Quantitative Reasoning block is quantitative comparisons — say the QC directions and the four choices aloud before starting it.' }],
-      items: [
-        { id: 'd2r_s1_6', type: 'checklist', skills: ['speed-range'], prompt: 'SSAT #3 · Section 1 · Q6' },
-        { id: 'd2r_s1_10', type: 'checklist', skills: ['prob-mult'], prompt: 'SSAT #3 · Section 1 · Q10' },
-        { id: 'd2r_s1_17', type: 'checklist', skills: ['cube-packing'], prompt: 'SSAT #3 · Section 1 · Q17' },
-        { id: 'd2r_s1_19', type: 'checklist', skills: ['function-notation'], prompt: 'SSAT #3 · Section 1 · Q19' },
-        { id: 'd2r_s1_20', type: 'checklist', skills: ['answer-asked', 'chart-read'], prompt: 'SSAT #3 · Section 1 · Q20' },
-        { id: 'd2r_s1_21', type: 'checklist', skills: ['answer-asked', 'chart-read'], prompt: 'SSAT #3 · Section 1 · Q21' },
-        { id: 'd2r_s1_22', type: 'checklist', skills: ['venn'], prompt: 'SSAT #3 · Section 1 · Q22' },
-        { id: 'd2r_s4_4', type: 'checklist', skills: ['estimation'], prompt: 'SSAT #3 · Section 4 · Q4' },
-        { id: 'd2r_s4_6', type: 'checklist', skills: ['revenue-balance'], prompt: 'SSAT #3 · Section 4 · Q6' },
-        { id: 'd2r_s4_7', type: 'checklist', skills: ['venn'], prompt: 'SSAT #3 · Section 4 · Q7' },
-        { id: 'd2r_s4_14', type: 'checklist', skills: ['rate-time'], prompt: 'SSAT #3 · Section 4 · Q14' },
-        { id: 'd2r_s4_24', type: 'checklist', skills: ['segment-algebra'], prompt: 'SSAT #3 · Section 4 · Q24' },
-        { id: 'd2r_s4_25', type: 'checklist', skills: ['reverse-percent'], prompt: 'SSAT #3 · Section 4 · Q25' },
-        { id: 'd2r_qr_2', type: 'checklist', skills: ['spatial-view'], prompt: 'ISEE #2 · Quantitative Reasoning · Q2' },
-        { id: 'd2r_qr_3', type: 'checklist', skills: ['stats-mean'], prompt: 'ISEE #2 · Quantitative Reasoning · Q3' },
-        { id: 'd2r_qr_6', type: 'checklist', skills: ['triangle-area'], prompt: 'ISEE #2 · Quantitative Reasoning · Q6' },
-        { id: 'd2r_qr_7', type: 'checklist', skills: ['stats-mean-median-effect'], prompt: 'ISEE #2 · Quantitative Reasoning · Q7' },
-        { id: 'd2r_qr_8', type: 'checklist', skills: ['sum-series'], prompt: 'ISEE #2 · Quantitative Reasoning · Q8' },
-        { id: 'd2r_qr_11', type: 'checklist', skills: ['perimeter-area'], prompt: 'ISEE #2 · Quantitative Reasoning · Q11' },
-        { id: 'd2r_qr_12', type: 'checklist', skills: ['answer-asked'], prompt: 'ISEE #2 · Quantitative Reasoning · Q12' },
-        { id: 'd2r_qr_13', type: 'checklist', skills: ['chart-read'], prompt: 'ISEE #2 · Quantitative Reasoning · Q13' },
-        { id: 'd2r_qr_14', type: 'checklist', skills: ['lcm-product'], prompt: 'ISEE #2 · Quantitative Reasoning · Q14' },
-        { id: 'd2r_qr_16', type: 'checklist', skills: ['percent-chain'], prompt: 'ISEE #2 · Quantitative Reasoning · Q16' },
-        { id: 'd2r_qr_17', type: 'checklist', skills: ['scale-area'], prompt: 'ISEE #2 · Quantitative Reasoning · Q17' },
-        { id: 'd2r_qr_18', type: 'checklist', skills: ['factors'], prompt: 'ISEE #2 · Quantitative Reasoning · Q18' },
-        { id: 'd2r_qr_19', type: 'checklist', skills: ['qc-algebra'], prompt: 'ISEE #2 · QR (quantitative comparison) · Q19' },
-        { id: 'd2r_qr_22', type: 'checklist', skills: ['qc-boundary'], prompt: 'ISEE #2 · QR (quantitative comparison) · Q22' },
-        { id: 'd2r_qr_23', type: 'checklist', skills: ['qc-label'], prompt: 'ISEE #2 · QR (quantitative comparison) · Q23' },
-        { id: 'd2r_qr_25', type: 'checklist', skills: ['qc-not-to-scale'], prompt: 'ISEE #2 · QR (quantitative comparison) · Q25' },
-        { id: 'd2r_qr_28', type: 'checklist', skills: ['polygon-angles'], prompt: 'ISEE #2 · QR (quantitative comparison) · Q28' },
-        { id: 'd2r_qr_31', type: 'checklist', skills: ['counting-pairs'], prompt: 'ISEE #2 · QR (quantitative comparison) · Q31' },
-        { id: 'd2r_qr_34', type: 'checklist', skills: ['negatives-magnitude'], prompt: 'ISEE #2 · QR (quantitative comparison) · Q34' },
-        { id: 'd2r_qr_36', type: 'checklist', skills: ['qc-assumed-similarity'], prompt: 'ISEE #2 · QR (quantitative comparison) · Q36' },
-        { id: 'd2r_qr_37', type: 'checklist', skills: ['qc-one-case'], prompt: 'ISEE #2 · QR (quantitative comparison) · Q37' },
-        { id: 'd2r_ma_15', type: 'checklist', skills: ['grid-area'], prompt: 'ISEE #2 · Mathematics Achievement · Q15' },
-        { id: 'd2r_ma_16', type: 'checklist', skills: ['prob-mult'], prompt: 'ISEE #2 · Mathematics Achievement · Q16' },
-        { id: 'd2r_ma_18', type: 'checklist', skills: ['radicals'], prompt: 'ISEE #2 · Mathematics Achievement · Q18' },
-        { id: 'd2r_ma_19', type: 'checklist', skills: ['answer-asked'], prompt: 'ISEE #2 · Mathematics Achievement · Q19' },
-        { id: 'd2r_ma_21', type: 'checklist', skills: ['reverse-percent'], prompt: 'ISEE #2 · Mathematics Achievement · Q21' },
-        { id: 'd2r_ma_22', type: 'checklist', skills: ['fraction-zero'], prompt: 'ISEE #2 · Mathematics Achievement · Q22' },
-        { id: 'd2r_ma_23', type: 'checklist', skills: ['unit-conversion'], prompt: 'ISEE #2 · Mathematics Achievement · Q23' },
-        { id: 'd2r_ma_33', type: 'checklist', skills: ['stats-median-grouped'], prompt: 'ISEE #2 · Mathematics Achievement · Q33' },
-        { id: 'd2r_ma_34', type: 'checklist', skills: ['stats-weighted-mean'], prompt: 'ISEE #2 · Mathematics Achievement · Q34' },
-        { id: 'd2r_ma_35', type: 'checklist', skills: ['stats-median-grouped'], prompt: 'ISEE #2 · Mathematics Achievement · Q35' },
-        { id: 'd2r_ma_36', type: 'checklist', skills: ['inequality-translate'], prompt: 'ISEE #2 · Mathematics Achievement · Q36' },
-        { id: 'd2r_ma_38', type: 'checklist', skills: ['imaginary'], prompt: 'ISEE #2 · Mathematics Achievement · Q38' },
-        { id: 'd2r_ma_39', type: 'checklist', skills: ['distance-formula'], prompt: 'ISEE #2 · Mathematics Achievement · Q39' },
-        { id: 'd2r_ma_42', type: 'checklist', skills: ['gcf'], prompt: 'ISEE #2 · Mathematics Achievement · Q42' },
-        { id: 'd2r_ma_43', type: 'checklist', skills: ['sequence-explicit'], prompt: 'ISEE #2 · Mathematics Achievement · Q43' },
-        { id: 'd2r_ma_44', type: 'checklist', skills: ['coordinate-geometry'], prompt: 'ISEE #2 · Mathematics Achievement · Q44' },
-        { id: 'd2r_ma_45', type: 'checklist', skills: ['function-notation'], prompt: 'ISEE #2 · Mathematics Achievement · Q45' },
-        { id: 'd2r_ma_46', type: 'checklist', skills: ['rational-equation'], prompt: 'ISEE #2 · Mathematics Achievement · Q46' },
-        { id: 'd2r_ma_47', type: 'checklist', skills: ['trig-ratio'], prompt: 'ISEE #2 · Mathematics Achievement · Q47' },
+      "id": "sep1_d2_review_ssat",
+      "day": "Day 2 · Wed Sept 2",
+      "availableFrom": "2026-09-02",
+      "order": 70,
+      "title": "Review A — SSAT Quantitative",
+      "subtitle": "13 questions · SSAT rules · 15 minutes",
+      "scoring": "ssat",
+      "timeLimitS": 900,
+      "intro": [
+        {
+          "type": "directions",
+          "html": "<b>Directions:</b> Following each problem there are five suggested answers. Work each problem on scratch paper, then decide which answer is best. <b>Scoring:</b> +1 correct, −¼ incorrect, 0 blank."
+        }
       ],
+      "items": [
+        {
+          "id": "rvs1",
+          "type": "mc",
+          "skills": [
+            "speed-range"
+          ],
+          "prompt": "A bus took between 2½ and 3 hours to make a 150-mile trip. The average speed of the bus, in miles per hour, must be between which range of values?",
+          "choices": [
+            [
+              "A",
+              "40 and 50"
+            ],
+            [
+              "B",
+              "50 and 60"
+            ],
+            [
+              "C",
+              "55 and 65"
+            ],
+            [
+              "D",
+              "60 and 70"
+            ],
+            [
+              "E",
+              "70 and 80"
+            ]
+          ],
+          "answer": "B",
+          "explain": "$150 \\div 3 = 50$ and $150 \\div 2.5 = 60$. The longer time gives the lower speed, so the speed is between 50 and 60 mph."
+        },
+        {
+          "id": "rvs2",
+          "type": "mc",
+          "skills": [
+            "prob-mult"
+          ],
+          "prompt": "Events $P$, $Q$, and $R$ are independent. If $P(P) = 0.5$, $P(Q) = 0.3$, and $P(R) = 0.2$, what is the probability that all three events occur?",
+          "choices": [
+            [
+              "A",
+              "0.03"
+            ],
+            [
+              "B",
+              "0.1"
+            ],
+            [
+              "C",
+              "0.3"
+            ],
+            [
+              "D",
+              "0.5"
+            ],
+            [
+              "E",
+              "1.0"
+            ]
+          ],
+          "answer": "A",
+          "explain": "\"And\" for independent events means multiply: $0.5 \\times 0.3 \\times 0.2 = 0.03$. Choice (E) adds the probabilities."
+        },
+        {
+          "id": "rvs3",
+          "type": "mc",
+          "skills": [
+            "cube-packing",
+            "scale-volume"
+          ],
+          "prompt": "A large cube has a volume of 512 cubic inches. How many small cubes with a side length of 4 inches can fit inside the large cube?",
+          "choices": [
+            [
+              "A",
+              "128"
+            ],
+            [
+              "B",
+              "64"
+            ],
+            [
+              "C",
+              "16"
+            ],
+            [
+              "D",
+              "8"
+            ],
+            [
+              "E",
+              "4"
+            ]
+          ],
+          "answer": "D",
+          "explain": "$512 = 8^3$, so the large cube's side is 8 in. Two small cubes fit along each edge: $2 \\times 2 \\times 2 = 8$. Choice (A) divides 512 by 4 instead of by $4^3$."
+        },
+        {
+          "id": "rvs4",
+          "type": "mc",
+          "skills": [
+            "function-notation"
+          ],
+          "prompt": "If $h(x - 1) = 5x + 2$ for all values of $x$, what is the value of $h(3)$?",
+          "choices": [
+            [
+              "A",
+              "17"
+            ],
+            [
+              "B",
+              "22"
+            ],
+            [
+              "C",
+              "12"
+            ],
+            [
+              "D",
+              "27"
+            ],
+            [
+              "E",
+              "7"
+            ]
+          ],
+          "answer": "B",
+          "explain": "Solve the argument first: $x - 1 = 3 \\Rightarrow x = 4$. Then $h(3) = 5(4) + 2 = 22$. Choice (A) substitutes 3 for $x$ directly."
+        },
+        {
+          "id": "rvs5",
+          "type": "mc",
+          "skills": [
+            "chart-read",
+            "answer-asked"
+          ],
+          "prompt": "A day was divided as follows: sleeping 30%, school 25%, homework 10%, sports 5%, other 30%. What fractional part of the day was spent sleeping or playing sports?",
+          "choices": [
+            [
+              "A",
+              "$\\tfrac{3}{10}$"
+            ],
+            [
+              "B",
+              "$\\tfrac{7}{20}$"
+            ],
+            [
+              "C",
+              "$\\tfrac{1}{20}$"
+            ],
+            [
+              "D",
+              "$\\tfrac{2}{5}$"
+            ],
+            [
+              "E",
+              "$\\tfrac{3}{5}$"
+            ]
+          ],
+          "answer": "B",
+          "explain": "$30\\% + 5\\% = 35\\% = \\tfrac{7}{20}$. Choice (A) is sleeping alone."
+        },
+        {
+          "id": "rvs6",
+          "type": "mc",
+          "skills": [
+            "chart-read",
+            "answer-asked"
+          ],
+          "prompt": "Using the same division of the day (sleeping 30%, school 25%, homework 10%, sports 5%, other 30%): if 60 minutes were spent on sports, what was the difference between the number of minutes spent sleeping and the number spent on homework?",
+          "choices": [
+            [
+              "A",
+              "240"
+            ],
+            [
+              "B",
+              "360"
+            ],
+            [
+              "C",
+              "120"
+            ],
+            [
+              "D",
+              "300"
+            ],
+            [
+              "E",
+              "480"
+            ]
+          ],
+          "answer": "A",
+          "explain": "Sports is 5%, so the whole day recorded is $60 \\div 0.05 = 1200$ minutes. Sleeping $= 360$, homework $= 120$, difference $= 240$. Choices (B) and (C) stop before subtracting."
+        },
+        {
+          "id": "rvs7",
+          "type": "mc",
+          "skills": [
+            "venn"
+          ],
+          "prompt": "In a survey, each of 300 students plays the piano, the guitar, or both. If 210 play the piano and 150 play the guitar, how many play both?",
+          "choices": [
+            [
+              "A",
+              "60"
+            ],
+            [
+              "B",
+              "90"
+            ],
+            [
+              "C",
+              "150"
+            ],
+            [
+              "D",
+              "240"
+            ],
+            [
+              "E",
+              "360"
+            ]
+          ],
+          "answer": "A",
+          "explain": "Overlapping groups: $\\text{piano} + \\text{guitar} - \\text{both} = \\text{total}$, so $210 + 150 - x = 300$ and $x = 60$. Choice (B) is $300 - 210$."
+        },
+        {
+          "id": "rvs8",
+          "type": "mc",
+          "skills": [
+            "estimation"
+          ],
+          "prompt": "The table shows the prices of six items. What is the best estimate of the total cost?<table class=\"dtable\"><tr><th>Price</th><td>\\$2.89</td><td>\\$0.95</td><td>\\$4.12</td><td>\\$1.05</td><td>\\$3.79</td><td>\\$6.15</td></tr></table>",
+          "choices": [
+            [
+              "A",
+              "\\$15"
+            ],
+            [
+              "B",
+              "\\$17"
+            ],
+            [
+              "C",
+              "\\$19"
+            ],
+            [
+              "D",
+              "\\$21"
+            ],
+            [
+              "E",
+              "\\$23"
+            ]
+          ],
+          "answer": "C",
+          "explain": "Round each to the nearest dollar: $3 + 1 + 4 + 1 + 4 + 6 = 19$ (exact total \\$18.95)."
+        },
+        {
+          "id": "rvs9",
+          "type": "mc",
+          "skills": [
+            "revenue-balance",
+            "answer-asked"
+          ],
+          "prompt": "A bakery sells an average of 800 muffins per day at \\$1.50 each. It plans to raise the price to \\$2.00. After the increase, how many fewer muffins can the bakery sell per day for daily sales to stay the same?",
+          "choices": [
+            [
+              "A",
+              "100"
+            ],
+            [
+              "B",
+              "200"
+            ],
+            [
+              "C",
+              "400"
+            ],
+            [
+              "D",
+              "600"
+            ],
+            [
+              "E",
+              "1,200"
+            ]
+          ],
+          "answer": "B",
+          "explain": "Current daily sales $= 800 \\times 1.50 = \\$1200$. At \\$2.00 each, $1200 \\div 2 = 600$ muffins. The question asks how many fewer: $800 - 600 = 200$. Choice (D) is the new count."
+        },
+        {
+          "id": "rvs10",
+          "type": "mc",
+          "skills": [
+            "venn"
+          ],
+          "prompt": "Each of 80 students owns a bicycle, a skateboard, or both. If 55 own a bicycle and 40 own a skateboard, how many own both?",
+          "choices": [
+            [
+              "A",
+              "15"
+            ],
+            [
+              "B",
+              "25"
+            ],
+            [
+              "C",
+              "35"
+            ],
+            [
+              "D",
+              "40"
+            ],
+            [
+              "E",
+              "95"
+            ]
+          ],
+          "answer": "A",
+          "explain": "$55 + 40 - x = 80 \\Rightarrow x = 15$. Choice (E) is the sum without subtracting the overlap."
+        },
+        {
+          "id": "rvs11",
+          "type": "mc",
+          "skills": [
+            "rate-time"
+          ],
+          "prompt": "The average time it took Noah to swim each lap was 3 minutes 45 seconds. How long did it take him to swim 6 laps?",
+          "choices": [
+            [
+              "A",
+              "20 minutes 30 seconds"
+            ],
+            [
+              "B",
+              "21 minutes 45 seconds"
+            ],
+            [
+              "C",
+              "22 minutes 30 seconds"
+            ],
+            [
+              "D",
+              "22 minutes 50 seconds"
+            ],
+            [
+              "E",
+              "23 minutes 30 seconds"
+            ]
+          ],
+          "answer": "C",
+          "explain": "$6 \\times 3$ min $= 18$ min; $6 \\times 45$ s $= 270$ s $= 4$ min 30 s. Total $22$ min 30 s. Keep minutes and seconds separate, then convert the seconds."
+        },
+        {
+          "id": "rvs12",
+          "type": "mc",
+          "skills": [
+            "segment-algebra",
+            "answer-asked"
+          ],
+          "prompt": "Points $A$, $B$, and $C$ lie on a line in that order. Segment $AB$ is 15 inches long, $AC = 4x + 3$, and $BC = 3x - 2$. How long is segment $AC$?",
+          "choices": [
+            [
+              "A",
+              "10 in"
+            ],
+            [
+              "B",
+              "28 in"
+            ],
+            [
+              "C",
+              "43 in"
+            ],
+            [
+              "D",
+              "58 in"
+            ],
+            [
+              "E",
+              "15 in"
+            ]
+          ],
+          "answer": "C",
+          "explain": "$AB = AC - BC$: $(4x + 3) - (3x - 2) = x + 5 = 15 \\Rightarrow x = 10$. Then $AC = 4(10) + 3 = 43$. Choice (A) is $x$; choice (B) is $BC$."
+        },
+        {
+          "id": "rvs13",
+          "type": "mc",
+          "skills": [
+            "reverse-percent"
+          ],
+          "prompt": "A phone is valued at \\$612 today. If it loses 15% of its value each year, what was its value one year ago?",
+          "choices": [
+            [
+              "A",
+              "\\$520"
+            ],
+            [
+              "B",
+              "\\$704"
+            ],
+            [
+              "C",
+              "\\$720"
+            ],
+            [
+              "D",
+              "\\$765"
+            ],
+            [
+              "E",
+              "\\$612"
+            ]
+          ],
+          "answer": "C",
+          "explain": "Losing 15% leaves 85%: $0.85x = 612 \\Rightarrow x = 720$. Choice (B) adds 15% to today's value, which applies the percent to the wrong amount."
+        }
+      ]
+    },
+    {
+      "id": "sep1_d2_review_qr",
+      "day": "Day 2 · Wed Sept 2",
+      "availableFrom": "2026-09-02",
+      "order": 71,
+      "title": "Review B — ISEE Quantitative Reasoning",
+      "subtitle": "12 word problems + 9 quantitative comparisons · ISEE rules · 25 minutes",
+      "scoring": "isee",
+      "timeLimitS": 1500,
+      "intro": [
+        {
+          "type": "directions",
+          "html": "<b>Directions — Questions 1–12:</b> Each question has four suggested answers. Select the best answer. Answer every question — there is no penalty for a wrong answer.<br><b>Directions — Questions 13–21 (Quantitative Comparisons):</b> Using all information given, compare the quantity in Column A to the quantity in Column B and select (A) if Column A is greater, (B) if Column B is greater, (C) if they are equal, or (D) if the relationship cannot be determined from the information given."
+        },
+        {
+          "type": "reference",
+          "title": "Strategy Reference — Prove It Before You Choose",
+          "html": "Choosing (A), (B), or (C) claims the relationship holds in <i>every</i> allowed case. Try to break it: test a second value, test a weird value (a fraction between 0 and 1, a negative, zero), or compute the actual number. If the comparison ever changes, the answer is (D). \"Not drawn to scale\" means the picture proves nothing."
+        }
+      ],
+      "items": [
+        {
+          "id": "rvq1",
+          "type": "mc",
+          "skills": [
+            "spatial-view"
+          ],
+          "prompt": "A solid is built from identical cubes. The bottom layer is three cubes arranged in an L shape, and one more cube sits on top of the corner cube of the L. Which figure represents the view of the solid from directly above?",
+          "choices": [
+            [
+              "A",
+              "An L shape made of 3 squares"
+            ],
+            [
+              "B",
+              "A 2-by-2 square made of 4 squares"
+            ],
+            [
+              "C",
+              "A row of 4 squares"
+            ],
+            [
+              "D",
+              "A single square"
+            ]
+          ],
+          "answer": "A",
+          "explain": "From above, stacked cubes cover the same square; the top view shows one square for each column of cubes. The footprint is the L of 3 squares. Choice (B) counts the stacked cube as extra floor space."
+        },
+        {
+          "id": "rvq2",
+          "type": "mc",
+          "skills": [
+            "stats-mean"
+          ],
+          "prompt": "Twelve ropes have a mean length of 30 inches. If 5 inches are cut from every rope, what is the new mean length?",
+          "choices": [
+            [
+              "A",
+              "25 inches"
+            ],
+            [
+              "B",
+              "30 inches"
+            ],
+            [
+              "C",
+              "35 inches"
+            ],
+            [
+              "D",
+              "It cannot be determined from the information given."
+            ]
+          ],
+          "answer": "A",
+          "explain": "Subtracting the same amount from every value subtracts that amount from the mean: $30 - 5 = 25$."
+        },
+        {
+          "id": "rvq3",
+          "type": "mc",
+          "skills": [
+            "triangle-area"
+          ],
+          "prompt": "Rectangle $ABCD$ has $AB = 10$ cm and $BC = 4$ cm. Point $M$ is the midpoint of side $DC$. What is the area of triangle $BCM$?",
+          "choices": [
+            [
+              "A",
+              "8 cm²"
+            ],
+            [
+              "B",
+              "10 cm²"
+            ],
+            [
+              "C",
+              "20 cm²"
+            ],
+            [
+              "D",
+              "40 cm²"
+            ]
+          ],
+          "answer": "B",
+          "explain": "$DC = AB = 10$, so $CM = 5$. The triangle's legs are $CM = 5$ and $BC = 4$: area $= \\tfrac{1}{2}(5)(4) = 10$. Choice (C) forgets the ½; choice (D) is the rectangle."
+        },
+        {
+          "id": "rvq4",
+          "type": "mc",
+          "skills": [
+            "stats-mean-median-effect"
+          ],
+          "prompt": "A class of 25 students has a mean score of 82% and a median of 85%. Only two students scored below 60%. Both retake the exam and score 65% and 70%. Which statement is true?",
+          "choices": [
+            [
+              "A",
+              "The mean and median both increase."
+            ],
+            [
+              "B",
+              "The mean increases and the median is unchanged."
+            ],
+            [
+              "C",
+              "The median increases and the mean is unchanged."
+            ],
+            [
+              "D",
+              "The mean and median both stay the same."
+            ]
+          ],
+          "answer": "B",
+          "explain": "Two scores rose, so the total and the mean rise. Both new scores are still below the median, so the middle value does not move."
+        },
+        {
+          "id": "rvq5",
+          "type": "mc",
+          "skills": [
+            "sum-series"
+          ],
+          "prompt": "If the sum of all integers from 1 to 300, inclusive, is $x$, which expression represents the sum of all integers from 1 to 298, inclusive?",
+          "choices": [
+            [
+              "A",
+              "$x - 2$"
+            ],
+            [
+              "B",
+              "$x - 299$"
+            ],
+            [
+              "C",
+              "$x - 599$"
+            ],
+            [
+              "D",
+              "$x + 599$"
+            ]
+          ],
+          "answer": "C",
+          "explain": "The second sum is missing 299 and 300: $x - (299 + 300) = x - 599$. Choice (A) subtracts the count of missing terms, not their values."
+        },
+        {
+          "id": "rvq6",
+          "type": "mc",
+          "skills": [
+            "perimeter-area"
+          ],
+          "prompt": "A rectangle has an area of 48 square centimeters, and its length and width are whole numbers of centimeters. What is the least possible perimeter?",
+          "choices": [
+            [
+              "A",
+              "14 cm"
+            ],
+            [
+              "B",
+              "28 cm"
+            ],
+            [
+              "C",
+              "32 cm"
+            ],
+            [
+              "D",
+              "98 cm"
+            ]
+          ],
+          "answer": "B",
+          "explain": "Factor pairs of 48: 1×48, 2×24, 3×16, 4×12, 6×8. The pair closest to a square gives the least perimeter: $2(6 + 8) = 28$."
+        },
+        {
+          "id": "rvq7",
+          "type": "mc",
+          "skills": [
+            "answer-asked"
+          ],
+          "prompt": "If $\\tfrac{1}{4}a + \\tfrac{1}{4}b = -5$, what is the value of $2a + 2b$?",
+          "choices": [
+            [
+              "A",
+              "−40"
+            ],
+            [
+              "B",
+              "−20"
+            ],
+            [
+              "C",
+              "−10"
+            ],
+            [
+              "D",
+              "−5"
+            ]
+          ],
+          "answer": "A",
+          "explain": "Multiply by 4: $a + b = -20$. Then $2(a + b) = -40$. Choice (B) stops at $a + b$."
+        },
+        {
+          "id": "rvq8",
+          "type": "mc",
+          "skills": [
+            "chart-read"
+          ],
+          "prompt": "A set of 21 heights, in inches, is symmetric about 65 inches. The range is 8 inches and the minimum is 61 inches. There are 2 values of 61, 3 values of 62, and 4 values of 64. How many values are 66, 68, or 69 inches?",
+          "choices": [
+            [
+              "A",
+              "6"
+            ],
+            [
+              "B",
+              "9"
+            ],
+            [
+              "C",
+              "12"
+            ],
+            [
+              "D",
+              "21"
+            ]
+          ],
+          "answer": "B",
+          "explain": "Symmetry about 65 pairs 61↔69, 62↔68, 64↔66. So there are 2 values of 69, 3 of 68, and 4 of 66: $2 + 3 + 4 = 9$."
+        },
+        {
+          "id": "rvq9",
+          "type": "mc",
+          "skills": [
+            "lcm-product"
+          ],
+          "prompt": "If $x$ is a multiple of 6 and $y$ is a multiple of 9, what is the least possible value of the product $xy$?",
+          "choices": [
+            [
+              "A",
+              "18"
+            ],
+            [
+              "B",
+              "27"
+            ],
+            [
+              "C",
+              "54"
+            ],
+            [
+              "D",
+              "108"
+            ]
+          ],
+          "answer": "C",
+          "explain": "The least values are $x = 6$ and $y = 9$, so the least product is $6 \\times 9 = 54$. Choice (A) is the least common multiple, which answers a different question."
+        },
+        {
+          "id": "rvq10",
+          "type": "mc",
+          "skills": [
+            "percent-chain"
+          ],
+          "prompt": "The length of a rectangle is increased by 30 percent and its width is decreased by 20 percent. What is the percent change in the area?",
+          "choices": [
+            [
+              "A",
+              "an increase of 4%"
+            ],
+            [
+              "B",
+              "an increase of 5%"
+            ],
+            [
+              "C",
+              "an increase of 10%"
+            ],
+            [
+              "D",
+              "an increase of 24%"
+            ]
+          ],
+          "answer": "A",
+          "explain": "Percent changes multiply: $1.30 \\times 0.80 = 1.04$, an increase of 4%. Choice (C) adds the percents."
+        },
+        {
+          "id": "rvq11",
+          "type": "mc",
+          "skills": [
+            "scale-area"
+          ],
+          "prompt": "The ratio of the radius of Sphere P to the radius of Sphere Q is 1 to 4. The surface area of Sphere Q is how many times the surface area of Sphere P? (Surface area of a sphere $= 4\\pi r^2$)",
+          "choices": [
+            [
+              "A",
+              "4"
+            ],
+            [
+              "B",
+              "8"
+            ],
+            [
+              "C",
+              "16"
+            ],
+            [
+              "D",
+              "64"
+            ]
+          ],
+          "answer": "C",
+          "explain": "Surface area scales with the square of the radius: $4^2 = 16$. Choice (D) is the volume factor $4^3$."
+        },
+        {
+          "id": "rvq12",
+          "type": "mc",
+          "skills": [
+            "factors"
+          ],
+          "prompt": "What is the sum of the two smallest factors shared by 24 and 40?",
+          "choices": [
+            [
+              "A",
+              "3"
+            ],
+            [
+              "B",
+              "6"
+            ],
+            [
+              "C",
+              "10"
+            ],
+            [
+              "D",
+              "12"
+            ]
+          ],
+          "answer": "A",
+          "explain": "Factors of 24: 1, 2, 3, 4, …; factors of 40: 1, 2, 4, 5, …. The two smallest common factors are 1 and 2; their sum is 3. Choice (B) forgets that 1 is a factor of every number."
+        },
+        {
+          "id": "rvq13",
+          "type": "qc",
+          "skills": [
+            "qc-algebra"
+          ],
+          "prompt": "",
+          "colA": "$3(x^2 - 2)$",
+          "colB": "$3x^2 - 2$",
+          "choices": [
+            [
+              "A",
+              "The quantity in Column A is greater."
+            ],
+            [
+              "B",
+              "The quantity in Column B is greater."
+            ],
+            [
+              "C",
+              "The two quantities are equal."
+            ],
+            [
+              "D",
+              "The relationship cannot be determined from the information given."
+            ]
+          ],
+          "answer": "B",
+          "explain": "Distribute: Column A $= 3x^2 - 6$. Column B $= 3x^2 - 2$. Whatever $x$ is, Column A is exactly 4 less, so Column B is greater."
+        },
+        {
+          "id": "rvq14",
+          "type": "qc",
+          "skills": [
+            "qc-boundary"
+          ],
+          "prompt": "A hat contains pieces of paper numbered 3 through 9.",
+          "colA": "The probability of choosing an even number",
+          "colB": "The probability of choosing a number greater than 6",
+          "choices": [
+            [
+              "A",
+              "The quantity in Column A is greater."
+            ],
+            [
+              "B",
+              "The quantity in Column B is greater."
+            ],
+            [
+              "C",
+              "The two quantities are equal."
+            ],
+            [
+              "D",
+              "The relationship cannot be determined from the information given."
+            ]
+          ],
+          "answer": "C",
+          "explain": "Papers: 3, 4, 5, 6, 7, 8, 9 (seven). Even: 4, 6, 8 → $\\tfrac{3}{7}$. Greater than 6: 7, 8, 9 → $\\tfrac{3}{7}$. Equal. \"Greater than 6\" does not include 6."
+        },
+        {
+          "id": "rvq15",
+          "type": "qc",
+          "skills": [
+            "qc-label"
+          ],
+          "prompt": "A drawer holds pencils and pens. There are 4 times as many pencils as pens, and 50 items in all.",
+          "colA": "The number of pens",
+          "colB": "12",
+          "choices": [
+            [
+              "A",
+              "The quantity in Column A is greater."
+            ],
+            [
+              "B",
+              "The quantity in Column B is greater."
+            ],
+            [
+              "C",
+              "The two quantities are equal."
+            ],
+            [
+              "D",
+              "The relationship cannot be determined from the information given."
+            ]
+          ],
+          "answer": "B",
+          "explain": "Let pens $= x$; pencils $= 4x$; $5x = 50 \\Rightarrow x = 10$. Column A is 10, which is less than 12. Compare the group the column names (pens), not the one you solved for first (pencils, 40)."
+        },
+        {
+          "id": "rvq16",
+          "type": "qc",
+          "skills": [
+            "qc-not-to-scale"
+          ],
+          "prompt": "Rectangle P has sides $m$ and $4m$ and an area of 100 ft². Rectangle Q has sides $n$ and $3n$. Figures not drawn to scale.",
+          "colA": "$m$",
+          "colB": "$n$",
+          "choices": [
+            [
+              "A",
+              "The quantity in Column A is greater."
+            ],
+            [
+              "B",
+              "The quantity in Column B is greater."
+            ],
+            [
+              "C",
+              "The two quantities are equal."
+            ],
+            [
+              "D",
+              "The relationship cannot be determined from the information given."
+            ]
+          ],
+          "answer": "D",
+          "explain": "$4m^2 = 100 \\Rightarrow m = 5$. Nothing is given about Rectangle Q's area, so $n$ could be anything. A comparison with an unconstrained quantity is (D)."
+        },
+        {
+          "id": "rvq17",
+          "type": "qc",
+          "skills": [
+            "polygon-angles"
+          ],
+          "prompt": "The sum of the interior angles of a polygon with $n$ sides is $180(n - 2)$.",
+          "colA": "The measure of one interior angle of a regular octagon",
+          "colB": "The measure of one interior angle of a regular pentagon",
+          "choices": [
+            [
+              "A",
+              "The quantity in Column A is greater."
+            ],
+            [
+              "B",
+              "The quantity in Column B is greater."
+            ],
+            [
+              "C",
+              "The two quantities are equal."
+            ],
+            [
+              "D",
+              "The relationship cannot be determined from the information given."
+            ]
+          ],
+          "answer": "A",
+          "explain": "Octagon: $180(6)/8 = 135°$. Pentagon: $180(3)/5 = 108°$. More sides means each interior angle is larger — compute, don't assume."
+        },
+        {
+          "id": "rvq18",
+          "type": "qc",
+          "skills": [
+            "counting-pairs"
+          ],
+          "prompt": "Six teams each play every other team exactly once.",
+          "colA": "The total number of games played",
+          "colB": "30",
+          "choices": [
+            [
+              "A",
+              "The quantity in Column A is greater."
+            ],
+            [
+              "B",
+              "The quantity in Column B is greater."
+            ],
+            [
+              "C",
+              "The two quantities are equal."
+            ],
+            [
+              "D",
+              "The relationship cannot be determined from the information given."
+            ]
+          ],
+          "answer": "B",
+          "explain": "Each pair of teams plays once: $5 + 4 + 3 + 2 + 1 = 15$ games. $6 \\times 5 = 30$ counts every game twice."
+        },
+        {
+          "id": "rvq19",
+          "type": "qc",
+          "skills": [
+            "negatives-magnitude"
+          ],
+          "prompt": "$n$ is a positive even integer.",
+          "colA": "$(-4)^n$",
+          "colB": "$-4^{\\,n+1}$",
+          "choices": [
+            [
+              "A",
+              "The quantity in Column A is greater."
+            ],
+            [
+              "B",
+              "The quantity in Column B is greater."
+            ],
+            [
+              "C",
+              "The two quantities are equal."
+            ],
+            [
+              "D",
+              "The relationship cannot be determined from the information given."
+            ]
+          ],
+          "answer": "A",
+          "explain": "With $n$ even, $(-4)^n$ is positive. $-4^{n+1}$ has no parentheses, so the negative is applied after the power: it is negative. Positive beats negative regardless of size."
+        },
+        {
+          "id": "rvq20",
+          "type": "qc",
+          "skills": [
+            "qc-assumed-similarity"
+          ],
+          "prompt": "Triangle 1 has sides of length 5, 12, and $y$. Triangle 2 has sides of length 10, 24, and $z$. The triangles are not drawn to scale.",
+          "colA": "$y$",
+          "colB": "$z$",
+          "choices": [
+            [
+              "A",
+              "The quantity in Column A is greater."
+            ],
+            [
+              "B",
+              "The quantity in Column B is greater."
+            ],
+            [
+              "C",
+              "The two quantities are equal."
+            ],
+            [
+              "D",
+              "The relationship cannot be determined from the information given."
+            ]
+          ],
+          "answer": "D",
+          "explain": "Nothing says the triangles are right triangles or similar. $y$ can be anything between 7 and 17; $z$ anything between 14 and 34. Assuming 5-12-13 and 10-24-26 supplies information that was never given."
+        },
+        {
+          "id": "rvq21",
+          "type": "qc",
+          "skills": [
+            "qc-one-case"
+          ],
+          "prompt": "The area of a rectangle is 36 cm².",
+          "colA": "The perimeter of the rectangle",
+          "colB": "24 cm",
+          "choices": [
+            [
+              "A",
+              "The quantity in Column A is greater."
+            ],
+            [
+              "B",
+              "The quantity in Column B is greater."
+            ],
+            [
+              "C",
+              "The two quantities are equal."
+            ],
+            [
+              "D",
+              "The relationship cannot be determined from the information given."
+            ]
+          ],
+          "answer": "D",
+          "explain": "A 6×6 rectangle has perimeter 24 (equal); a 4×9 rectangle has perimeter 26 (greater); 2×18 gives 40. The comparison changes, so it cannot be determined. One matching case is not proof."
+        }
+      ]
+    },
+    {
+      "id": "sep1_d2_review_ma",
+      "day": "Day 2 · Wed Sept 2",
+      "availableFrom": "2026-09-02",
+      "order": 72,
+      "title": "Review C — ISEE Mathematics Achievement",
+      "subtitle": "18 questions · ISEE rules · 25 minutes",
+      "scoring": "isee",
+      "timeLimitS": 1500,
+      "intro": [
+        {
+          "type": "directions",
+          "html": "<b>Directions:</b> Each question is followed by four suggested answers. Select the best answer. Answer every question — there is no penalty for a wrong answer."
+        }
+      ],
+      "items": [
+        {
+          "id": "rvm1",
+          "type": "mc",
+          "skills": [
+            "grid-area"
+          ],
+          "prompt": "On a grid where each square has an area of 9 cm², a right triangle is drawn with one leg 4 squares long and the other leg 3 squares long. What is the area of the triangle?",
+          "choices": [
+            [
+              "A",
+              "27 cm²"
+            ],
+            [
+              "B",
+              "54 cm²"
+            ],
+            [
+              "C",
+              "72 cm²"
+            ],
+            [
+              "D",
+              "108 cm²"
+            ]
+          ],
+          "answer": "B",
+          "explain": "Area in squares $= \\tfrac{1}{2}(4)(3) = 6$ squares; each square is 9 cm², so $6 \\times 9 = 54$ cm². Choice (D) forgets the ½."
+        },
+        {
+          "id": "rvm2",
+          "type": "mc",
+          "skills": [
+            "prob-mult"
+          ],
+          "prompt": "A box contains 7 blue, 5 green, and 8 red crayons. One crayon is selected at random and returned to the box, then a second crayon is selected. What is the probability that both crayons are green?",
+          "choices": [
+            [
+              "A",
+              "$\\tfrac{1}{5}$"
+            ],
+            [
+              "B",
+              "$\\tfrac{5}{20} \\times \\tfrac{5}{20}$"
+            ],
+            [
+              "C",
+              "$\\tfrac{5}{20} \\times \\tfrac{4}{19}$"
+            ],
+            [
+              "D",
+              "$\\tfrac{1}{5} \\times \\tfrac{1}{4}$"
+            ]
+          ],
+          "answer": "B",
+          "explain": "There are 20 crayons, so $P(\\text{green}) = \\tfrac{5}{20}$ each time because the crayon is returned. Multiply: $\\tfrac{5}{20} \\times \\tfrac{5}{20}$. Choice (C) is without replacement."
+        },
+        {
+          "id": "rvm3",
+          "type": "mc",
+          "skills": [
+            "radicals"
+          ],
+          "prompt": "Which numerical expression does NOT represent an integer?",
+          "choices": [
+            [
+              "A",
+              "$\\sqrt{81} - \\sqrt{16}$"
+            ],
+            [
+              "B",
+              "$\\sqrt{36} + \\sqrt{4}$"
+            ],
+            [
+              "C",
+              "$\\sqrt{100 - 19}$"
+            ],
+            [
+              "D",
+              "$\\sqrt{25 + 5}$"
+            ]
+          ],
+          "answer": "D",
+          "explain": "(A) $9 - 4 = 5$; (B) $6 + 2 = 8$; (C) $\\sqrt{81} = 9$; (D) $\\sqrt{30}$ is not an integer. Check what is under each radical before simplifying."
+        },
+        {
+          "id": "rvm4",
+          "type": "mc",
+          "skills": [
+            "reverse-percent"
+          ],
+          "prompt": "A poll predicted that 40% of an estimated 5,000 voters would support a candidate. If 60 people in the poll chose that candidate, how many people were polled?",
+          "choices": [
+            [
+              "A",
+              "96"
+            ],
+            [
+              "B",
+              "150"
+            ],
+            [
+              "C",
+              "240"
+            ],
+            [
+              "D",
+              "2,000"
+            ]
+          ],
+          "answer": "B",
+          "explain": "60 is 40% of the number polled: $0.40x = 60 \\Rightarrow x = 150$. The 5,000 is a distractor; the poll size is what is asked."
+        },
+        {
+          "id": "rvm5",
+          "type": "mc",
+          "skills": [
+            "fraction-zero"
+          ],
+          "prompt": "For what value(s) of $c$ is $\\dfrac{c - 3}{c + 5} = 0$?",
+          "choices": [
+            [
+              "A",
+              "$-5$"
+            ],
+            [
+              "B",
+              "$3$"
+            ],
+            [
+              "C",
+              "$-5$ and $3$"
+            ],
+            [
+              "D",
+              "There are no values of $c$ that make the equation true."
+            ]
+          ],
+          "answer": "B",
+          "explain": "A fraction is 0 only when the numerator is 0 and the denominator is not: $c - 3 = 0 \\Rightarrow c = 3$. At $c = -5$ the fraction is undefined, not zero."
+        },
+        {
+          "id": "rvm6",
+          "type": "mc",
+          "skills": [
+            "unit-conversion"
+          ],
+          "prompt": "There are 2.54 centimeters in an inch. A conveyor belt moves 120 inches per minute. Which expression gives its speed in centimeters per second?",
+          "choices": [
+            [
+              "A",
+              "$\\dfrac{120 \\times 2.54}{60}$"
+            ],
+            [
+              "B",
+              "$\\dfrac{120 \\times 60}{2.54}$"
+            ],
+            [
+              "C",
+              "$\\dfrac{60}{120 \\times 2.54}$"
+            ],
+            [
+              "D",
+              "$\\dfrac{120}{2.54 \\times 60}$"
+            ]
+          ],
+          "answer": "A",
+          "explain": "Write the units and cancel: $\\dfrac{120\\ \\text{in}}{1\\ \\text{min}} \\times \\dfrac{2.54\\ \\text{cm}}{1\\ \\text{in}} \\times \\dfrac{1\\ \\text{min}}{60\\ \\text{s}}$. Inches and minutes cancel, leaving cm per second."
+        },
+        {
+          "id": "rvm7",
+          "type": "mc",
+          "skills": [
+            "stats-median-grouped"
+          ],
+          "prompt": "The table shows the number of goals scored by each of 25 players this season. What is the median number of goals?<table class=\"dtable\"><tr><th>Goals</th><td>0</td><td>1</td><td>2</td><td>3</td><td>4</td><td>5</td><td>6</td></tr><tr><th>Players</th><td>2</td><td>6</td><td>5</td><td>4</td><td>3</td><td>3</td><td>2</td></tr></table>",
+          "choices": [
+            [
+              "A",
+              "2"
+            ],
+            [
+              "B",
+              "3"
+            ],
+            [
+              "C",
+              "3.5"
+            ],
+            [
+              "D",
+              "4"
+            ]
+          ],
+          "answer": "A",
+          "explain": "$n = 25$, median is the 13th value. Cumulative: 0 → 1–2; 1 → 3–8; 2 → 9–13. The 13th value is 2. Choice (B) is the middle of the axis."
+        },
+        {
+          "id": "rvm8",
+          "type": "mc",
+          "skills": [
+            "stats-weighted-mean"
+          ],
+          "prompt": "Ava's four quiz scores are 80, 92, 84, and 88. Her midterm will count twice in her mean. What midterm score raises her mean by 3 points?",
+          "choices": [
+            [
+              "A",
+              "89"
+            ],
+            [
+              "B",
+              "92"
+            ],
+            [
+              "C",
+              "95"
+            ],
+            [
+              "D",
+              "98"
+            ]
+          ],
+          "answer": "C",
+          "explain": "Current mean $= 344 \\div 4 = 86$; target 89. $\\dfrac{344 + 2x}{6} = 89 \\Rightarrow 344 + 2x = 534 \\Rightarrow x = 95$."
+        },
+        {
+          "id": "rvm9",
+          "type": "mc",
+          "skills": [
+            "stats-median-grouped"
+          ],
+          "prompt": "The frequency table shows the number of tables each of 15 servers handled in one hour. What is the median number of tables?<table class=\"dtable\"><tr><th>Tables</th><td>3</td><td>4</td><td>5</td><td>6</td><td>8</td></tr><tr><th>Servers</th><td>5</td><td>2</td><td>3</td><td>3</td><td>2</td></tr></table>",
+          "choices": [
+            [
+              "A",
+              "4"
+            ],
+            [
+              "B",
+              "4.5"
+            ],
+            [
+              "C",
+              "5"
+            ],
+            [
+              "D",
+              "5.2"
+            ]
+          ],
+          "answer": "C",
+          "explain": "$n = 15$, median is the 8th value. Cumulative: 3 → 1–5; 4 → 6–7; 5 → 8–10. The 8th value is 5. Choice (D) averages the labels."
+        },
+        {
+          "id": "rvm10",
+          "type": "mc",
+          "skills": [
+            "inequality-translate"
+          ],
+          "prompt": "A solution set on a number line has an open circle at $-2$, a closed circle at $5$, and the segment between them shaded. Which inequality matches this solution set?",
+          "choices": [
+            [
+              "A",
+              "$-5 < x - 3 \\le 2$"
+            ],
+            [
+              "B",
+              "$-5 \\le x - 3 < 2$"
+            ],
+            [
+              "C",
+              "$-6 < x + 1 \\le 1$"
+            ],
+            [
+              "D",
+              "$0 \\le x - 2 < 7$"
+            ]
+          ],
+          "answer": "A",
+          "explain": "The graph is $-2 < x \\le 5$ (open at $-2$, closed at 5). Add 3 to each part of (A): $-2 < x \\le 5$ ✓. (B) has the endpoints reversed; (C) gives $-7 < x \\le 0$; (D) gives $2 \\le x < 9$."
+        },
+        {
+          "id": "rvm11",
+          "type": "mc",
+          "skills": [
+            "imaginary"
+          ],
+          "prompt": "What is the solution set of $x^2 + 49 = 0$?",
+          "choices": [
+            [
+              "A",
+              "$7$"
+            ],
+            [
+              "B",
+              "$7i$"
+            ],
+            [
+              "C",
+              "$\\pm 7$"
+            ],
+            [
+              "D",
+              "$\\pm 7i$"
+            ]
+          ],
+          "answer": "D",
+          "explain": "$x^2 = -49$, so $x = \\pm\\sqrt{-49} = \\pm 7i$. The $+49$ forces a negative square, which real numbers cannot give, and the square root introduces both signs."
+        },
+        {
+          "id": "rvm12",
+          "type": "mc",
+          "skills": [
+            "distance-formula"
+          ],
+          "prompt": "The point $(1, 2)$ lies on a circle with center $(4, 6)$. What is the radius of the circle?",
+          "choices": [
+            [
+              "A",
+              "5"
+            ],
+            [
+              "B",
+              "7"
+            ],
+            [
+              "C",
+              "$\\sqrt{7}$"
+            ],
+            [
+              "D",
+              "25"
+            ]
+          ],
+          "answer": "A",
+          "explain": "Radius $=$ distance between the points: $\\sqrt{(4-1)^2 + (6-2)^2} = \\sqrt{9 + 16} = 5$. Choice (B) adds the legs instead of using the Pythagorean theorem."
+        },
+        {
+          "id": "rvm13",
+          "type": "mc",
+          "skills": [
+            "gcf"
+          ],
+          "prompt": "If $a$ and $b$ are prime numbers, what is the greatest common factor of $6a$, $9ab^2$, and $12a^2b$?",
+          "choices": [
+            [
+              "A",
+              "$3a$"
+            ],
+            [
+              "B",
+              "$3ab$"
+            ],
+            [
+              "C",
+              "$12ab$"
+            ],
+            [
+              "D",
+              "$36a^2b^2$"
+            ]
+          ],
+          "answer": "A",
+          "explain": "GCF of 6, 9, 12 is 3. Every term has at least one $a$; the first term has no $b$, so $b$ is not common. GCF $= 3a$."
+        },
+        {
+          "id": "rvm14",
+          "type": "mc",
+          "skills": [
+            "sequence-explicit"
+          ],
+          "prompt": "The first five terms of an arithmetic sequence are $-5, -1, 3, 7, 11$. Which expression represents the $n$th term?",
+          "choices": [
+            [
+              "A",
+              "$n - 5$"
+            ],
+            [
+              "B",
+              "$n + 4$"
+            ],
+            [
+              "C",
+              "$4n - 9$"
+            ],
+            [
+              "D",
+              "$4n - 5$"
+            ]
+          ],
+          "answer": "C",
+          "explain": "The common difference is 4, so the rule has the form $4n + c$. Test $n = 1$: $4(1) + c = -5 \\Rightarrow c = -9$. Choice (B) describes the step, not the $n$th term."
+        },
+        {
+          "id": "rvm15",
+          "type": "mc",
+          "skills": [
+            "coordinate-geometry"
+          ],
+          "prompt": "Three vertices of a trapezoid are $(0, 0)$, $(6, 0)$, and $(4, 3)$. Which ordered pair could be the fourth vertex?",
+          "choices": [
+            [
+              "A",
+              "$(1, 3)$"
+            ],
+            [
+              "B",
+              "$(2, 4)$"
+            ],
+            [
+              "C",
+              "$(7, 2)$"
+            ],
+            [
+              "D",
+              "$(3, 5)$"
+            ]
+          ],
+          "answer": "A",
+          "explain": "A trapezoid needs one pair of parallel sides. The side from $(0,0)$ to $(6,0)$ is horizontal, so a fourth vertex with $y = 3$ makes the opposite side horizontal too: $(1, 3)$. Check the other choices — none produces a parallel pair."
+        },
+        {
+          "id": "rvm16",
+          "type": "mc",
+          "skills": [
+            "function-notation"
+          ],
+          "prompt": "If $f(x - 4) = 3x + 5$ for all values of $x$, what is the value of $f(2)$?",
+          "choices": [
+            [
+              "A",
+              "23"
+            ],
+            [
+              "B",
+              "11"
+            ],
+            [
+              "C",
+              "17"
+            ],
+            [
+              "D",
+              "−1"
+            ]
+          ],
+          "answer": "A",
+          "explain": "Solve the argument first: $x - 4 = 2 \\Rightarrow x = 6$. Then $f(2) = 3(6) + 5 = 23$. Choice (B) substitutes 2 for $x$."
+        },
+        {
+          "id": "rvm17",
+          "type": "mc",
+          "skills": [
+            "rational-equation"
+          ],
+          "prompt": "What is the value of $k$ in the equation $\\dfrac{1}{4k^2} = \\dfrac{1}{2k^2} - \\dfrac{1}{k}$?",
+          "choices": [
+            [
+              "A",
+              "$\\tfrac{1}{4}$"
+            ],
+            [
+              "B",
+              "$\\tfrac{1}{2}$"
+            ],
+            [
+              "C",
+              "2"
+            ],
+            [
+              "D",
+              "4"
+            ]
+          ],
+          "answer": "A",
+          "explain": "Multiply every term by $4k^2$: $1 = 2 - 4k$, so $4k = 1$ and $k = \\tfrac{1}{4}$. Multiply <i>every</i> term, including the one on the left."
+        },
+        {
+          "id": "rvm18",
+          "type": "mc",
+          "skills": [
+            "trig-ratio"
+          ],
+          "prompt": "In right triangle $PQR$, the right angle is at $R$, angle $P$ measures $40°$, and side $QR$ (the side opposite angle $P$) is 20 feet. Which expression equals the length of the hypotenuse $PQ$?",
+          "choices": [
+            [
+              "A",
+              "$20 \\sin 40°$"
+            ],
+            [
+              "B",
+              "$20 \\cos 40°$"
+            ],
+            [
+              "C",
+              "$\\dfrac{20}{\\sin 40°}$"
+            ],
+            [
+              "D",
+              "$\\dfrac{20}{\\cos 40°}$"
+            ]
+          ],
+          "answer": "C",
+          "explain": "From angle $P$, $QR$ is opposite and $PQ$ is the hypotenuse: $\\sin 40° = \\dfrac{20}{PQ}$, so $PQ = \\dfrac{20}{\\sin 40°}$. Identify opposite vs. adjacent from the angle named, then pick the ratio."
+        }
+      ]
     },
 
     /* ==================== DAY 3 ==================== */
@@ -310,8 +2054,8 @@ window.WORDCOURT_DRILLS = {
     },
     {
       id: 'sep1_d3_secondpass', day: 'Day 3 · Thu Sept 3', availableFrom: '2026-09-03', order: 110,
-      title: 'Second Pass — Test Innovators', subtitle: 'Wednesday\'s ✗ questions, cold again', scoring: 'none', timeLimitS: null, dynamicFrom: 'sep1_d2_review',
-      intro: [{ type: 'directions', html: '<b>Directions:</b> This list is built from Wednesday\'s Review Set — every question marked ✗ there. Rework each cold on the platform and mark it. A question missed both days needs a new error-log line beginning <i>"Different this time:"</i> that names what changed.' }],
+      title: 'Second Pass — Test Innovators', subtitle: 'Every question missed on Wednesday, in a fresh form', scoring: 'none', timeLimitS: null, dynamicFrom: ['sep1_d2_review_ssat','sep1_d2_review_qr','sep1_d2_review_ma'],
+      intro: [{ type: 'directions', html: '<b>Directions:</b> This set is built automatically from Wednesday\'s three review sets — every question answered incorrectly, presented again with the same structure. Answer every question. A question missed both days needs a new error-log line beginning <i>"Different this time:"</i> that names what changed.' }],
       items: [],
     },
 

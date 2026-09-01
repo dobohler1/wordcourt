@@ -63,12 +63,22 @@ const Drills = (() => {
   }
   async function buildItems(set, userId) {
     if (!set.dynamicFrom) return set.items;
-    const src = setById(set.dynamicFrom); if (!src) return [];
-    const runs = (await loadRuns(userId)).filter(r => r.set_id === src.id && r.finished_at);
-    if (!runs.length) return [];
-    const att = await loadAttempts(userId, runs[0].id);
-    const missed = new Set(att.filter(a => a.correct === false).map(a => a.item_id));
-    return src.items.filter(i => missed.has(i.id)).map(i => ({ ...i, id: i.id + '_sp', sourceItem: i.id }));
+    const sources = [].concat(set.dynamicFrom).map(setById).filter(Boolean);
+    const runs = await loadRuns(userId);
+    const out = [];
+    for (const src of sources) {
+      const latest = runs.find(r => r.set_id === src.id && r.finished_at);
+      if (!latest) continue;
+      const att = await loadAttempts(userId, latest.id);
+      const missed = new Set(att.filter(a => a.correct === false).map(a => a.item_id));
+      out.push(...src.items.filter(i => missed.has(i.id)).map(i => ({ ...i, id: i.id + '_sp', sourceItem: i.id })));
+    }
+    return out;
+  }
+  // question text plus, for quantitative comparisons, the two-column table
+  function promptHtml(item) {
+    if (item.type !== 'qc') return item.prompt;
+    return `${item.prompt ? `<div class="qc-info">${item.prompt}</div>` : ''}<table class="qc-table"><tr><th>Column A</th><th>Column B</th></tr><tr><td>${item.colA}</td><td>${item.colB}</td></tr></table>`;
   }
 
   // ---------- list view ----------
@@ -214,7 +224,7 @@ const Drills = (() => {
   function itemNode(item, n) {
     const node = el('div', 'drill-item');
     if (item.figure && D.figures[item.figure]) node.append(el('div', 'drill-figure', D.figures[item.figure]));
-    node.append(el('div', 'drill-q', `<span class="drill-n">${n}.</span> ${item.prompt}`));
+    node.append(el('div', 'drill-q', `<span class="drill-n">${n}.</span> ${promptHtml(item)}`));
     if (item.type === 'numeric') {
       const inp = el('input'); inp.type = 'text'; inp.placeholder = 'your answer'; inp.className = 'drill-num';
       inp.addEventListener('input', () => record(item, inp.value.trim()));
@@ -310,7 +320,7 @@ const Drills = (() => {
       const node = el('div', `drill-result ${cls}`);
       const yours = it.type === 'checklist' ? (r.chosen === 'ok' ? '✓' : r.chosen === 'miss' ? '✗' : 'unmarked') : (r.chosen ?? (r.timed_out ? 'not reached' : 'blank'));
       const right = it.type === 'checklist' ? '' : it.type === 'numeric' ? it.answer : it.answer;
-      node.append(el('div', 'drill-q', `<span class="drill-n">${mark} ${i + 1}.</span> ${it.prompt}`));
+      node.append(el('div', 'drill-q', `<span class="drill-n">${mark} ${i + 1}.</span> ${promptHtml(it)}`));
       if (it.type !== 'checklist') node.append(el('div', 'drill-ans', `Your answer: <b>${esc(yours)}</b>${r.correct === true ? '' : ` · Correct: <b>${esc(right)}</b>`}`));
       if (it.explain && (r.correct !== true || it.type === 'numeric')) node.append(el('div', 'drill-explain', it.explain));
       if (r.correct === false) {

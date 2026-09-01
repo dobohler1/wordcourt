@@ -182,6 +182,10 @@ main { max-width: 40rem; margin: 0 auto; padding: 1.25rem 1rem 4rem; }
 .drill-note label { display: block; font-size: .8rem; color: var(--muted); margin-bottom: .25rem; }
 .drill-note textarea { width: 100%; background: var(--panel2); color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: .5rem .7rem; font: inherit; resize: vertical; }
 .drill-note textarea:focus { border-color: var(--accent); outline: none; }
+.qc-info { text-align: center; font-style: italic; margin: .4rem 0; }
+.qc-table { width: 100%; border-collapse: collapse; margin: .5rem 0 .6rem; }
+.qc-table th { font-size: .72rem; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid var(--line); padding: .25rem .5rem; text-align: center; width: 50%; }
+.qc-table td { padding: .7rem .5rem; text-align: center; vertical-align: top; font-size: 1.05rem; }
 .dtable { border-collapse: collapse; margin: .5rem 0; font-size: .95rem; }
 .dtable th, .dtable td { border: 1px solid var(--line); padding: .25rem .6rem; text-align: center; }
 .dtable th { text-align: left; font-weight: 600; }
