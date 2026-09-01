@@ -54,7 +54,10 @@ const Drills = (() => {
   async function loadAttempts(userId, runId) {
     let q = sb.from('wc_drill_attempts').select('*').eq('user_id', userId).order('created_at', { ascending: true });
     if (runId) q = q.eq('run_id', runId);
-    const { data, error } = await q; if (error) throw error; return data || [];
+    const { data, error } = await q; if (error) throw error;
+    // one attempt per (run, item): a double-tapped Submit once saved duplicates — keep the first
+    const seen = new Set();
+    return (data || []).filter(a => { const k = a.run_id + '|' + a.item_id; if (seen.has(k)) return false; seen.add(k); return true; });
   }
   async function buildItems(set, userId) {
     if (!set.dynamicFrom) return set.items;
@@ -129,7 +132,7 @@ const Drills = (() => {
     const row = el('div', 'center-actions');
     const back = el('button', 'btn ghost', 'Back'); back.addEventListener('click', () => renderList(host));
     const go = el('button', 'btn primary big', set.timeLimitS ? `Begin · ${Math.round(set.timeLimitS / 60)} min timer` : 'Begin');
-    go.addEventListener('click', () => beginRun(host, set, items));
+    go.addEventListener('click', () => { if (go.disabled) return; go.disabled = true; go.textContent = 'Starting…'; beginRun(host, set, items); });
     row.append(back, go); card.append(row); host.append(card); typeset(card);
   }
   function introBlock(b) {
@@ -243,8 +246,10 @@ const Drills = (() => {
 
   // ---------- grading + persistence ----------
   async function finishRun(timedOut) {
-    if (!active) return;
+    if (!active || active.finishing) return;
+    active.finishing = true;
     if (active.timer) clearInterval(active.timer);
+    active.host.querySelectorAll('button').forEach(b => b.disabled = true);
     const { set, items, run, host } = active;
     const durationS = Math.round((Date.now() - active.startedAt) / 1000);
     const results = items.map(item => {
