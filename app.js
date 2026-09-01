@@ -151,6 +151,7 @@
 
   async function diagnosticAnswer(item, correct, latencyMs) {
     session.answered++;
+    Engine.logDiagnosticAnswer(session.row, item, { correct, latencyMs }).catch(() => {});
     await Engine.seedDiagnosticResult(item, correct, latencyMs);
     if (!correct) session.misses.push({ word: item.word, note: 'new word for your ladder' });
     session.xp += correct ? 2 : 1;
@@ -249,6 +250,7 @@
     let errorTag = null;
     if (!correct && q.section === 'analogies' && item.pickedBridge && item.pickedBridge !== q.relationship) errorTag = 'wrong-bridge';
     session.answered++;
+    if (session.kind === 'diagnostic') Engine.logDiagnosticAnswer(session.row, item, { correct, latencyMs: latency, chosen: choiceObj.letter }).catch(() => {});
     const res = session.kind === 'diagnostic'
       ? (session.xp += correct ? 3 : 1, { counted: true, rushed: false, correct, masteredNow: false, paidCents: 0 })
       : await Engine.processAnswer(session.row, item, { correct, latencyMs: latency, chosen: choiceObj.letter, errorTag });

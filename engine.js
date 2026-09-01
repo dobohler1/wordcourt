@@ -197,10 +197,11 @@ const Engine = (() => {
   }
 
   function buildDiagnostic() {
-    // probe across tiers, priority order, mixed directions; plus 2 questions per section unscaffolded
+    // probe across tiers, priority order, mixed directions; plus 2 questions per section unscaffolded.
+    // deterministic order + skip already-probed words so a mid-run refresh resumes cleanly.
     const probes = words
-      .filter(w => w.tier >= 2)
-      .sort((a, b) => priorityScore(b) - priorityScore(a))
+      .filter(w => w.tier >= 2 && !state.has(w.id))
+      .sort((a, b) => (priorityScore(b) - priorityScore(a)) || a.word.localeCompare(b.word))
       .filter((_, i) => i % 3 === 0)                     // spread down the ladder
       .slice(0, T.diagnosticProbes)
       .map((w, i) => flashcardItem(w, i % 2 ? 'def2word' : 'word2def'));
@@ -319,6 +320,16 @@ const Engine = (() => {
     return { counted, rushed, correct, masteredNow, paidCents, alreadyKnown, word: w };
   }
 
+  async function logDiagnosticAnswer(sessionRow, item, { correct, latencyMs, chosen }) {
+    // audit trail for diagnostics — same answers table as drills
+    const kindMap = { flashcard: 'flashcard', synonyms: 'synonym', sentence_completion: 'sentence_completion', analogies: 'analogy' };
+    await db.from('wc_answers').insert({
+      user_id: me.id, session_id: sessionRow.id, kind: kindMap[item.kind] || 'flashcard',
+      word_id: item.word?.id ?? null, question_id: item.q?.id ?? null,
+      correct, chosen: chosen ?? null, latency_ms: latencyMs, counted: true, rushed: false,
+    });
+  }
+
   async function seedDiagnosticResult(item, correct, latencyMs) {
     // diagnostic: fast+correct = known; correct = review box 2; wrong = learning box 0
     const w = item.word; if (!w) return;
@@ -384,7 +395,7 @@ const Engine = (() => {
 
   return {
     T, init, needsDiagnostic, buildSession, buildDiagnostic, openSession, closeSession,
-    processAnswer, seedDiagnosticResult, streak, wordCounts, moneySummary,
+    processAnswer, seedDiagnosticResult, logDiagnosticAnswer, streak, wordCounts, moneySummary,
     get me() { return me; }, get words() { return words; }, get state() { return state; },
     get skills() { return skills; }, get strategy() { return strategy; },
     clusterFor: id => (clusterOf.get(id) || [])[0] || null,
