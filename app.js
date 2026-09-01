@@ -34,6 +34,7 @@
     $('#view-login').hidden = true; $('#view-shell').hidden = false;
     $('#tab-coach').hidden = profile.role !== 'coach';
     await Engine.init(sb, profile);
+    Drills.init(sb, profile);
     Engine.streak().then(n => { $('#streak-chip').textContent = '🔥 ' + n; });
     showTab('today');
   }
@@ -56,6 +57,7 @@
     for (const v of document.querySelectorAll('.tab-view')) v.hidden = true;
     $('#tab-view-' + name).hidden = false;
     if (name === 'today') renderToday();
+    if (name === 'drills') Drills.renderList($('#drills-panel'));
     if (name === 'words') renderWords();
     if (name === 'money') renderMoney();
     if (name === 'coach') renderCoach();
@@ -443,6 +445,7 @@
         for (const t of teach.data) ul.append(el('li', null, `“${esc(t.sentence)}”`));
         card.append(ul);
       }
+      try { await Drills.renderCoach(card, s); } catch (e) { card.append(el('p', 'flag', 'Drills: ' + esc(e.message))); }
       host.append(card);
     }
   }

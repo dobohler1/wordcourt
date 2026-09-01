@@ -144,6 +144,57 @@ main { max-width: 40rem; margin: 0 auto; padding: 1.25rem 1rem 4rem; }
 .tbl th { color: var(--muted); font-size: .75rem; text-transform: uppercase; }
 
 .loading { text-align: center; color: var(--muted); padding: 3rem 0; }
+
+/* ---------- drills ---------- */
+.drill-list { list-style: none; margin: 0; padding: 0; }
+.drill-list li { display: flex; justify-content: space-between; align-items: center; gap: .75rem; padding: .6rem 0; border-top: 1px solid var(--line); }
+.drill-sub { color: var(--muted); font-size: .82rem; }
+.drill-right { display: flex; align-items: center; gap: .6rem; white-space: nowrap; }
+.drill-status { font-size: .78rem; border-radius: 999px; padding: .1rem .6rem; }
+.drill-status.todo { background: var(--panel2); color: var(--muted); }
+.drill-status.done { background: rgba(111,206,126,.15); color: var(--good); }
+.drill-status.pending { background: rgba(255,209,102,.15); color: var(--gold); }
+.drill-lock { font-size: .8rem; color: var(--muted); font-weight: 400; margin-left: .5rem; }
+.drill-directions { border: 1px solid var(--line); background: var(--panel2); border-radius: 10px; padding: .8rem 1rem; margin: .8rem 0; font-size: .95rem; }
+.drill-example { border-left: 3px solid var(--accent-deep); padding: .3rem 0 .3rem 1rem; margin: .8rem 0; font-size: .93rem; }
+.drill-exlabel { font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; color: var(--accent); margin-bottom: .3rem; }
+.drill-hud { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: 1rem; position: sticky; top: 3.4rem; background: var(--bg); padding: .5rem 0; z-index: 4; border-bottom: 1px solid var(--line); }
+.drill-prog { color: var(--muted); font-variant-numeric: tabular-nums; }
+.drill-clock { font-weight: 800; font-variant-numeric: tabular-nums; font-size: 1.2rem; min-width: 4rem; text-align: right; }
+.drill-clock.warn { color: var(--bad); }
+.drill-item { padding: 1rem 0; border-top: 1px solid var(--line); }
+.drill-item:first-child { border-top: none; padding-top: 0; }
+.drill-q { font-size: 1.05rem; margin-bottom: .5rem; }
+.drill-n { font-weight: 800; color: var(--accent); margin-right: .25rem; }
+.drill-num { width: 12rem; display: block; margin-top: .4rem; }
+.drill-figure { margin: .5rem 0; }
+.drill-figure svg { max-width: 100%; height: auto; }
+.drill-figure svg text { fill: var(--ink); }
+.drill-figure svg .ax, .drill-figure svg .tk { stroke: var(--ink); stroke-width: 1.5; }
+.drill-figure svg .bar { fill: var(--panel2); stroke: var(--ink); stroke-width: 1.5; }
+.drill-check { display: flex; gap: .5rem; }
+.drill-check .picked-ok { border-color: var(--good); color: var(--good); }
+.drill-check .picked-miss { border-color: var(--bad); color: var(--bad); }
+.choice.picked { border-color: var(--accent); background: rgba(169,143,240,.12); }
+.drill-passage { font-size: 1rem; line-height: 1.6; border-left: 2px solid var(--line); padding-left: 1rem; margin-bottom: 1rem; }
+.drill-passage p { margin: 0 0 .8rem; }
+.drill-note { margin: .6rem 0; }
+.drill-note label { display: block; font-size: .8rem; color: var(--muted); margin-bottom: .25rem; }
+.drill-note textarea { width: 100%; background: var(--panel2); color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: .5rem .7rem; font: inherit; resize: vertical; }
+.drill-note textarea:focus { border-color: var(--accent); outline: none; }
+.dtable { border-collapse: collapse; margin: .5rem 0; font-size: .95rem; }
+.dtable th, .dtable td { border: 1px solid var(--line); padding: .25rem .6rem; text-align: center; }
+.dtable th { text-align: left; font-weight: 600; }
+.drill-result { padding: .9rem 0; border-top: 1px solid var(--line); }
+.drill-result.good .drill-n { color: var(--good); }
+.drill-result.bad .drill-n { color: var(--bad); }
+.drill-result.blank .drill-n { color: var(--muted); }
+.drill-ans { font-size: .92rem; color: var(--muted); margin-bottom: .35rem; }
+.drill-explain { font-size: .92rem; background: var(--panel2); border-radius: 8px; padding: .6rem .8rem; }
+.drill-card-body h4 { margin: 1rem 0 .3rem; font-size: .8rem; text-transform: uppercase; letter-spacing: .08em; color: var(--accent); }
+.drill-card-body ul { margin: .2rem 0 .4rem 1.2rem; padding: 0; }
+.drill-card-body li { margin: .2rem 0; }
+mjx-container { font-size: 105%; }
 @media (max-width: 480px) {
   .topbar { flex-wrap: wrap; }
   .rings { justify-content: center; }

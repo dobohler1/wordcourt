@@ -6,6 +6,8 @@
 <title>WordCourt</title>
 <link rel="stylesheet" href="styles.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
+<script>window.MathJax = { tex: { inlineMath: [['$', '$']] }, svg: { fontCache: 'global' }, startup: { typeset: false } };</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script>
 </head>
 <body>
 <div id="app">
@@ -30,6 +32,7 @@
       <span class="logo small">Word<span>Court</span></span>
       <nav id="tabs">
         <button data-tab="today" class="tab active">Today</button>
+        <button data-tab="drills" class="tab">Drills</button>
         <button data-tab="words" class="tab">My Words</button>
         <button data-tab="money" class="tab">Money</button>
         <button data-tab="coach" class="tab" id="tab-coach" hidden>Coach</button>
@@ -64,6 +67,11 @@
         <div id="wrap-card"></div>
       </div>
 
+      <!-- DRILLS -->
+      <div id="tab-view-drills" class="tab-view" hidden>
+        <div id="drills-panel"></div>
+      </div>
+
       <!-- MY WORDS -->
       <div id="tab-view-words" class="tab-view" hidden>
         <div id="words-panel"></div>
@@ -83,6 +91,8 @@
 </div>
 <script src="config.js"></script>
 <script src="engine.js"></script>
+<script src="drills_content.js"></script>
+<script src="drills.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
