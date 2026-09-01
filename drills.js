@@ -49,7 +49,9 @@ const Drills = (() => {
   // ---------- data ----------
   async function loadRuns(userId) {
     const { data, error } = await sb.from('wc_drill_runs').select('*').eq('user_id', userId).order('started_at', { ascending: false });
-    if (error) throw error; return data || [];
+    if (error) throw error;
+    // ignore runs a stray timer force-submitted instantly (0 s, every item unanswered)
+    return (data || []).filter(r => !(r.finished_at && r.n_items > 0 && r.duration_s === 0 && r.n_blank === r.n_items));
   }
   async function loadAttempts(userId, runId) {
     let q = sb.from('wc_drill_attempts').select('*').eq('user_id', userId).order('created_at', { ascending: true });
@@ -191,11 +193,15 @@ const Drills = (() => {
     typeset(form);
     if (set.timeLimitS) {
       const end = active.startedAt + set.timeLimitS * 1000;
-      active.timer = setInterval(() => {
+      const myRun = active.run.id;
+      const id = setInterval(() => {
+        // a timer only ever acts on the run it was started for — never on a later set
+        if (!active || active.run.id !== myRun) { clearInterval(id); return; }
         const left = Math.max(0, Math.round((end - Date.now()) / 1000));
         clock.textContent = fmtClock(left); clock.classList.toggle('warn', left <= 60);
-        if (left <= 0) { clearInterval(active.timer); finishRun(true); }
+        if (left <= 0) { clearInterval(id); finishRun(true); }
       }, 500);
+      active.timer = id;
     }
     window.scrollTo(0, 0);
   }
