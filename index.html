@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WordCourt</title>
+<link rel="stylesheet" href="styles.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
+</head>
+<body>
+<div id="app">
+  <!-- LOGIN -->
+  <section id="view-login" class="view">
+    <div class="login-card">
+      <h1 class="logo">Word<span>Court</span></h1>
+      <p class="tagline">15 minutes a day. Every word sticks.</p>
+      <form id="login-form">
+        <input id="login-email" type="email" placeholder="email" autocomplete="username" required>
+        <input id="login-pass" type="password" placeholder="password" autocomplete="current-password" required>
+        <button type="submit" class="btn primary" id="login-btn">Sign in</button>
+        <p class="form-msg" id="login-msg"></p>
+      </form>
+      <p class="signup-toggle">New here? Accounts are set up by your coach — ask them for a login.</p>
+    </div>
+  </section>
+
+  <!-- SHELL -->
+  <section id="view-shell" class="view" hidden>
+    <header class="topbar">
+      <span class="logo small">Word<span>Court</span></span>
+      <nav id="tabs">
+        <button data-tab="today" class="tab active">Today</button>
+        <button data-tab="words" class="tab">My Words</button>
+        <button data-tab="money" class="tab">Money</button>
+        <button data-tab="coach" class="tab" id="tab-coach" hidden>Coach</button>
+      </nav>
+      <div class="top-right">
+        <span id="streak-chip" class="chip" title="streak">🔥 0</span>
+        <button id="logout-btn" class="btn ghost small-btn">Sign out</button>
+      </div>
+    </header>
+
+    <main>
+      <!-- TODAY -->
+      <div id="tab-view-today" class="tab-view">
+        <div id="today-card"></div>
+      </div>
+
+      <!-- SESSION PLAYER -->
+      <div id="tab-view-session" class="tab-view" hidden>
+        <div class="session-hud">
+          <div class="hud-left"><span id="hud-progress">1/16</span></div>
+          <div class="focus-wrap" title="Focus meter — fills with real effort">
+            <div class="focus-bar"><div id="focus-fill"></div></div>
+            <span class="focus-label">focus</span>
+          </div>
+          <div class="hud-right"><span id="hud-xp">0 xp</span></div>
+        </div>
+        <div id="item-stage"></div>
+      </div>
+
+      <!-- WRAP-UP -->
+      <div id="tab-view-wrap" class="tab-view" hidden>
+        <div id="wrap-card"></div>
+      </div>
+
+      <!-- MY WORDS -->
+      <div id="tab-view-words" class="tab-view" hidden>
+        <div id="words-panel"></div>
+      </div>
+
+      <!-- MONEY -->
+      <div id="tab-view-money" class="tab-view" hidden>
+        <div id="money-panel"></div>
+      </div>
+
+      <!-- COACH -->
+      <div id="tab-view-coach" class="tab-view" hidden>
+        <div id="coach-panel"></div>
+      </div>
+    </main>
+  </section>
+</div>
+<script src="config.js"></script>
+<script src="engine.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

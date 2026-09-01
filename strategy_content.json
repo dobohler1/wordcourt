@@ -1,0 +1,94 @@
+{
+  "signal_words": {
+    "contrast": ["although", "though", "but", "however", "yet", "rather than", "instead of", "despite", "in spite of", "unlike", "while", "whereas", "nevertheless", "even though", "contrary to", "on the other hand", "surprisingly"],
+    "cause": ["because", "since", "therefore", "thus", "consequently", "as a result", "so", "due to", "leads to", "in order to"],
+    "continuation": ["and", "moreover", "furthermore", "in addition", "also", "indeed", "in fact", "likewise", "similarly", "just as"],
+    "definition": [";", ":", "—", "which is", "that is", "in other words", "known as", "or"]
+  },
+  "micro_lessons": [
+    {
+      "id": "predict-first",
+      "skill": "synonyms",
+      "title": "Say it before you see it",
+      "card": "Cover the choices. Say your own synonym for the word first — THEN look. The wrong answers are built to sound tempting; walking in with your own answer makes the right one jump out and the traps look like traps.",
+      "example": "FUTILE → you think 'useless' → scan choices → there it is. No trap can pull you sideways."
+    },
+    {
+      "id": "charge",
+      "skill": "synonyms",
+      "title": "Feel the charge",
+      "card": "Don't know the word? Feel whether it's positive (+), negative (−), or neutral (0). Word parts, sound, and where you've heard it all carry charge. Then delete every choice with the wrong charge — you'll usually kill 2 or 3 without knowing the definition.",
+      "example": "ODIOUS feels negative → cross out the positive choices → guess from what's left. That's a 50/50 instead of a 25% shot."
+    },
+    {
+      "id": "word-parts",
+      "skill": "synonyms",
+      "title": "Break it apart",
+      "card": "Prefixes and roots are free hints: BENE = good, MAL = bad, CRED = believe, DIC/DICT = say, SPEC = look, CIRCUM = around, EU = good, DYS = bad. A word you've never seen is often three parts you have.",
+      "example": "BENEFACTOR = bene (good) + factor (doer) = someone who does good → a helper or donor."
+    },
+    {
+      "id": "second-meanings",
+      "skill": "synonyms",
+      "title": "Suspect the second meaning",
+      "card": "When an easy word shows up in a hard question, the test usually wants its SECOND meaning: pedestrian = dull, coin = invent, sound = valid, champion = defend. If the obvious meaning makes the question feel too easy, it's the trap.",
+      "example": "PEDESTRIAN: (A) walker (B) dull... 'walker' is the bait. Upper-level tests pay for 'dull.'"
+    },
+    {
+      "id": "signal-words",
+      "skill": "sentence_completion",
+      "title": "Read the road signs",
+      "card": "Every sentence completion has road signs. ALTHOUGH / BUT / RATHER THAN = the blank flips direction. BECAUSE / THEREFORE = the blank follows the flow. A semicolon or colon = the blank is being defined right there in the sentence.",
+      "example": "'ALTHOUGH the skater won gold, her expression was one of complete ___' → although = flip → not happy → dejection."
+    },
+    {
+      "id": "charge-blank",
+      "skill": "sentence_completion",
+      "title": "Charge the blank",
+      "card": "Before looking at choices, decide: does this blank need a positive word or a negative word? You can almost always tell from the sentence's direction. Then delete every choice with the wrong charge.",
+      "example": "'...damage unprotected skin' → the blank is negative → innocuous (+) and variegated (0) are gone instantly."
+    },
+    {
+      "id": "predict-blank",
+      "skill": "sentence_completion",
+      "title": "Fill it yourself first",
+      "card": "Read the sentence and say your own word for the blank — any word, even a simple one. Then find the choice closest to yours. You're matching to your prediction, not auditioning four strangers.",
+      "example": "'The scientist maintained a strict ___, painstakingly following each procedure' → you say 'routine/system' → methodology matches."
+    },
+    {
+      "id": "two-blanks",
+      "skill": "sentence_completion",
+      "title": "Two blanks, one kill shot",
+      "card": "On two-blank questions, solve whichever blank is easier and delete every choice whose word fails it. Only then check the second word of the survivors. You almost never need to solve both blanks cold.",
+      "example": "If blank 1 must be negative, kill the choices whose first word is positive — usually only 2 survivors left to test."
+    },
+    {
+      "id": "bridge",
+      "skill": "analogies",
+      "title": "Build the bridge",
+      "card": "Turn the pair into one defining sentence — the bridge: 'A mop cleans a floor.' Then test every choice in YOUR bridge. If two choices fit, your bridge is too loose — tighten it and re-test.",
+      "example": "Mop : tile → 'a mop cleans tile floors' → vacuum cleans carpet ✓. Glove doesn't clean a hand — dead."
+    },
+    {
+      "id": "bridge-types",
+      "skill": "analogies",
+      "title": "Know the twelve bridges",
+      "card": "Nearly every SSAT analogy is one of a dozen relationships: synonym, antonym, degree (warm→scalding), part/whole, type/category, characteristic, function/tool, worker/product, cause/effect, lacking, location, action/object. Name the type and the answer narrows itself.",
+      "example": "Slumber : sleep = synonyms → find the synonym pair in the choices: bog : marsh."
+    },
+    {
+      "id": "degree-direction",
+      "skill": "analogies",
+      "title": "Mind the direction",
+      "card": "Degree bridges have a direction: which word is stronger? DISTRAUGHT is extreme DISCOURAGED (strong→mild). The right answer must run the same way — livid is extreme angry ✓, not angry→livid.",
+      "example": "Check order every time: strong→mild must match strong→mild. Reversed pairs are the #1 degree trap."
+    },
+    {
+      "id": "pacing",
+      "skill": "general",
+      "title": "Thirty seconds, then move",
+      "card": "Both exams give you about 30 seconds a question. Vocabulary is know-it-or-don't: answer fast, flag the unsure ones, and never leave a blank on the ISEE. Banked seconds belong to the long sentence completions.",
+      "example": "10 fast synonyms = 2 minutes banked for the questions that actually need reading."
+    }
+  ]
+}
