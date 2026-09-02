@@ -51,7 +51,7 @@ const Drills = (() => {
     const { data, error } = await sb.from('wc_drill_runs').select('*').eq('user_id', userId).order('started_at', { ascending: false });
     if (error) throw error;
     // ignore runs a stray timer force-submitted instantly (0 s, every item unanswered)
-    return (data || []).filter(r => !(r.finished_at && r.n_items > 0 && r.duration_s === 0 && r.n_blank === r.n_items));
+    return (data || []).filter(r => !(r.finished_at && r.n_items > 0 && r.duration_s <= 1 && r.n_blank === r.n_items));
   }
   async function loadAttempts(userId, runId) {
     let q = sb.from('wc_drill_attempts').select('*').eq('user_id', userId).order('created_at', { ascending: true });
