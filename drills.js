@@ -13,9 +13,30 @@ const Drills = (() => {
   const fmtDate = iso => new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
   const typeset = node => { if (window.MathJax?.typesetPromise) window.MathJax.typesetPromise([node]).catch(() => {}); };
 
-  function init(client, prof) { sb = client; profile = prof; }
+  let remote = null;   // rows already merged from wc_drill_sets (null = not loaded yet)
+  function init(client, prof) { sb = client; profile = prof; remote = null; }
   const isCoach = () => profile?.role === 'coach';
   const available = set => isCoach() || !set.availableFrom || todayStr() >= set.availableFrom;
+  // sets restricted to named student handles are hidden from everyone else (the server enforces this too)
+  const visible = set => !set.forHandles || isCoach() || set.forHandles.includes(profile?.handle);
+
+  // ---------- sets stored in the database ----------
+  // Some sets live in wc_drill_sets rather than drills_content.js — passages under copyright must not sit in the
+  // public repo. Rows are merged into D.sets once per login; RLS returns only the rows this user may see.
+  async function ensureRemote() {
+    if (remote) return remote;
+    try {
+      const { data, error } = await sb.from('wc_drill_sets').select('set_id, set');
+      if (error) throw error;
+      for (const row of data || []) {
+        const set = { ...row.set, id: row.set_id };
+        const i = D.sets.findIndex(s => s.id === set.id);
+        if (i >= 0) D.sets[i] = set; else D.sets.push(set);
+      }
+      remote = data || [];
+    } catch (e) { console.warn('remote drill sets unavailable:', e.message); remote = []; }
+    return remote;
+  }
   const setById = id => D.sets.find(s => s.id === id);
   const skillLabel = k => k.startsWith('w:') ? `word: ${k.slice(2)}` : (D.skills[k] || k);
 
@@ -85,10 +106,11 @@ const Drills = (() => {
   async function renderList(host) {
     host.innerHTML = '<div class="loading">loading drills…</div>';
     let runs = [];
+    await ensureRemote();
     try { runs = await loadRuns(profile.id); } catch (e) { host.innerHTML = `<div class="card"><p class="flag">Could not load drills: ${esc(e.message)}</p></div>`; return; }
     host.innerHTML = '';
     const byDay = new Map();
-    for (const s of [...D.sets].sort((a, b) => a.order - b.order)) { if (!byDay.has(s.day)) byDay.set(s.day, []); byDay.get(s.day).push(s); }
+    for (const s of [...D.sets].filter(visible).sort((a, b) => a.order - b.order)) { if (!byDay.has(s.day)) byDay.set(s.day, []); byDay.get(s.day).push(s); }
     const intro = el('div', 'card');
     intro.append(el('h2', null, 'Drills'), el('p', 'sub', 'The practice booklet, online. Everything is checked automatically; each miss asks for a one-line error log — <i>what got me</i> — before the set counts as finished.'));
     host.append(intro);
@@ -354,7 +376,7 @@ const Drills = (() => {
 
   // ---------- coach view ----------
   async function renderCoach(card, student) {
-    const [runs, att] = await Promise.all([loadRuns(student.id), loadAttempts(student.id)]);
+    const [runs, att] = await Promise.all([loadRuns(student.id), loadAttempts(student.id), ensureRemote()]);
     const finished = runs.filter(r => r.finished_at);
     card.append(el('h2', null, 'Drills'));
     if (!finished.length) { card.append(el('p', 'sub', 'No drill sets completed yet.')); return; }
@@ -395,5 +417,5 @@ const Drills = (() => {
     }
   }
 
-  return { init, renderList, renderCoach, startSet, _grade: grade, _normNum: normNum, _loadRuns: loadRuns, _loadAttempts: loadAttempts };
+  return { init, renderList, renderCoach, startSet, ensureRemote, _grade: grade, _normNum: normNum, _loadRuns: loadRuns, _loadAttempts: loadAttempts };
 })();

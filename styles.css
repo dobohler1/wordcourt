@@ -176,8 +176,10 @@ main { max-width: 40rem; margin: 0 auto; padding: 1.25rem 1rem 4rem; }
 .drill-check .picked-ok { border-color: var(--good); color: var(--good); }
 .drill-check .picked-miss { border-color: var(--bad); color: var(--bad); }
 .choice.picked { border-color: var(--accent); background: rgba(169,143,240,.12); }
-.drill-passage { font-size: 1rem; line-height: 1.6; border-left: 2px solid var(--line); padding-left: 1rem; margin-bottom: 1rem; }
-.drill-passage p { margin: 0 0 .8rem; }
+.drill-passage { font-size: 1rem; line-height: 1.6; border-left: 2px solid var(--line); padding-left: 2.4rem; margin-bottom: 1rem; counter-reset: para; }
+.drill-passage p { margin: 0 0 .8rem; position: relative; counter-increment: para; }
+.drill-passage p::before { content: counter(para); position: absolute; left: -1.9rem; top: .15em; font-size: .72rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.drill-passage .passage-src { font-size: .78rem; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 0 0 .6rem; }
 .drill-note { margin: .6rem 0; }
 .drill-note label { display: block; font-size: .8rem; color: var(--muted); margin-bottom: .25rem; }
 .drill-note textarea { width: 100%; background: var(--panel2); color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: .5rem .7rem; font: inherit; resize: vertical; }
