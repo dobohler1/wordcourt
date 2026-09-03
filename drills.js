@@ -16,7 +16,8 @@ const Drills = (() => {
   let remote = null;   // rows already merged from wc_drill_sets (null = not loaded yet)
   function init(client, prof) { sb = client; profile = prof; remote = null; }
   const isCoach = () => profile?.role === 'coach';
-  const available = set => isCoach() || !set.availableFrom || todayStr() >= set.availableFrom;
+  // done = Set of finished set ids for this user; a set with `requires` opens only after that set is finished
+  const available = (set, done) => isCoach() || ((!set.availableFrom || todayStr() >= set.availableFrom) && (!set.requires || !!done?.has(set.requires)));
   // sets restricted to named student handles are hidden from everyone else (the server enforces this too)
   const visible = set => !set.forHandles || isCoach() || set.forHandles.includes(profile?.handle);
 
@@ -30,6 +31,7 @@ const Drills = (() => {
       if (error) throw error;
       for (const row of data || []) {
         const set = { ...row.set, id: row.set_id };
+        if (set.skills) Object.assign(D.skills, set.skills);
         const i = D.sets.findIndex(s => s.id === set.id);
         if (i >= 0) D.sets[i] = set; else D.sets.push(set);
       }
@@ -114,15 +116,17 @@ const Drills = (() => {
     const intro = el('div', 'card');
     intro.append(el('h2', null, 'Drills'), el('p', 'sub', 'The practice booklet, online. Everything is checked automatically; each miss asks for a one-line error log — <i>what got me</i> — before the set counts as finished.'));
     host.append(intro);
+    const done = new Set(runs.filter(r => r.finished_at).map(r => r.set_id));
     for (const [day, sets] of byDay) {
       const card = el('div', 'card');
-      const open = sets.some(available);
+      const open = sets.some(s => available(s, done));
       card.append(el('h2', null, `${esc(day)}${open ? '' : ' <span class="drill-lock">🔒 opens ' + esc(sets[0].availableFrom) + '</span>'}`));
       const ul = el('ul', 'drill-list');
       for (const s of sets) {
         const mine = runs.filter(r => r.set_id === s.id && r.finished_at);
         const best = mine[0];
         let status = '<span class="drill-status todo">not started</span>';
+        if (!best && s.requires && !done.has(s.requires) && !isCoach()) status = `<span class="drill-status todo">🔒 ${esc(s.requiresLabel || 'locked')}</span>`;
         if (best) {
           const sc = best.scoring === 'ssat' ? `raw ${best.raw_score}` : `${best.n_correct}/${best.n_items}`;
           status = `<span class="drill-status ${best.logs_complete || best.n_wrong === 0 ? 'done' : 'pending'}">${s.type === 'card' ? 'read' : sc}${best.n_wrong && !best.logs_complete ? ' · error log pending' : ''}</span>`;
@@ -130,7 +134,7 @@ const Drills = (() => {
         const li = el('li', null, `<div><b>${esc(s.title)}</b><div class="drill-sub">${esc(s.subtitle || '')}</div></div>`);
         const right = el('div', 'drill-right', status);
         const btn = el('button', 'btn small-btn' + (best ? '' : ' primary'), best ? (best.n_wrong && !best.logs_complete ? 'Finish log' : 'Redo') : (s.type === 'card' ? 'Read' : 'Start'));
-        btn.disabled = !available(s);
+        btn.disabled = !available(s, done);
         btn.addEventListener('click', () => (best && best.n_wrong && !best.logs_complete) ? reopenLogs(host, s, best) : startSet(host, s));
         right.append(btn); li.append(right); ul.append(li);
       }
@@ -207,6 +211,21 @@ const Drills = (() => {
         ta.addEventListener('input', () => { active.notes.set(p.id, ta.value); qs.hidden = words(ta.value) < 5; });
         noteRow.append(ta); wrap.append(noteRow);
         items.filter(i => i.passage === p.id).forEach((it, idx) => qs.append(itemNode(it, items.indexOf(it) + 1)));
+        wrap.append(qs); form.append(wrap);
+      }
+      const rest = items.filter(i => !i.passage);   // e.g. chapter-recall questions after the passage block
+      if (rest.length) {
+        const wrap = el('div', 'card');
+        const qs = el('div');
+        if (set.recallPrompt) {
+          const noteRow = el('div', 'drill-note');
+          noteRow.append(el('label', null, set.recallPrompt));
+          const ta = el('textarea'); ta.rows = 2; ta.placeholder = 'one sentence, in your words';
+          qs.hidden = true;
+          ta.addEventListener('input', () => { active.notes.set('_recall', ta.value); qs.hidden = words(ta.value) < 5; });
+          noteRow.append(ta); wrap.append(noteRow);
+        }
+        rest.forEach(it => qs.append(itemNode(it, items.indexOf(it) + 1)));
         wrap.append(qs); form.append(wrap);
       }
     } else {
@@ -293,7 +312,7 @@ const Drills = (() => {
     const results = items.map(item => {
       const a = active.answers.get(item.id);
       const correct = a ? grade(item, a.chosen) : null;
-      const note = item.passage ? (active.notes.get(item.passage) || null) : (a?.note || null);
+      const note = item.passage ? (active.notes.get(item.passage) || null) : (set.recallPrompt ? (active.notes.get('_recall') || null) : (a?.note || null));
       return { item, chosen: a?.chosen ?? null, correct, blank: correct == null, timed_out: !a && timedOut, latency_ms: a?.at ?? null, note };
     });
     const nCorrect = results.filter(r => r.correct === true).length, nWrong = results.filter(r => r.correct === false).length, nBlank = results.filter(r => r.blank).length;
@@ -412,6 +431,21 @@ const Drills = (() => {
       for (const a of logged) {
         const it = setById(a.set_id)?.items.find(i => i.id === a.item_id);
         ul.append(el('li', null, `<span class="w">${esc((a.skills || []).filter(k => !k.startsWith('w:')).map(skillLabel).join(', ') || a.item_id)}</span> — “${esc(a.error_log)}”${it?.type === 'checklist' ? ` <i>(${esc(it.prompt)})</i>` : ''}`));
+      }
+      card.append(ul);
+    }
+    // reading log: sets flagged readingLog — passage score, recall score, and the lines the student wrote
+    const logSets = new Set(D.sets.filter(s => s.readingLog).map(s => s.id));
+    const readRuns = finished.filter(r => logSets.has(r.set_id)).slice(0, 12);
+    if (readRuns.length) {
+      card.append(el('h2', null, 'Reading log'));
+      const ul = el('ul', 'miss-list');
+      for (const r of readRuns) {
+        const mine = att.filter(a => a.run_id === r.id);
+        const recall = mine.filter(a => (a.skills || []).includes('rd-recall'));
+        const rc = recall.filter(a => a.correct).length;
+        const notes = [...new Set(mine.map(a => a.note).filter(Boolean))];
+        ul.append(el('li', null, `<span class="w">${esc(setById(r.set_id)?.title || r.set_id)}</span> — ${fmtDate(r.started_at)} · passage ${r.n_correct - rc}/${r.n_items - recall.length} · recall <b>${rc}/${recall.length}</b>${notes.length ? ' — “' + notes.map(esc).join('” · “') + '”' : ''}`));
       }
       card.append(ul);
     }

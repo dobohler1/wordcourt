@@ -33,6 +33,7 @@ const Dashboard = (() => {
 
   async function render(host) {
     host.innerHTML = '<div class="loading">gathering…</div>';
+    await Drills.ensureRemote();   // sets served from the database (handle-gated) join the list
     const { data: fam, error } = await sb.from('wc_profiles').select('*').neq('id', profile.id).order('handle');
     if (error) { host.innerHTML = `<div class="card"><p class="flag">${esc(error.message)}</p></div>`; return; }
     host.innerHTML = '';
@@ -87,7 +88,8 @@ const Dashboard = (() => {
 
     // ----- do next -----
     const doneIds = new Set(finished.map(r => r.set_id));
-    const open = D.sets.filter(x => (!x.availableFrom || x.availableFrom <= today) && !doneIds.has(x.id))
+    const open = D.sets.filter(x => (!x.availableFrom || x.availableFrom <= today) && !doneIds.has(x.id)
+      && (!x.requires || doneIds.has(x.requires)) && (!x.forHandles || x.forHandles.includes(s.handle)))
       .sort((a, b) => (a.availableFrom || '').localeCompare(b.availableFrom || '') || (a.order - b.order));
     card.append(el('h3', 'dash-h', 'Do next'));
     const ul = el('ul', 'next-list');
