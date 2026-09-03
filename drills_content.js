@@ -20,10 +20,487 @@ window.WORDCOURT_DRILLS = {
     'rd-main-idea': 'Reading: main idea (not too narrow)', 'rd-detail': 'Reading: detail (re-find the line)', 'rd-relationship': 'Reading: reversed relationship',
     'rd-tone': 'Reading: tone / attitude', 'rd-inference': 'Reading: inference (not anti-thesis)', 'rd-century': 'Reading: century / date arithmetic',
     'rd-vocab': 'Reading: vocabulary in context', 'rd-purpose': 'Reading: paragraph purpose', 'rd-sequence': 'Reading: sequence of events',
-    'rd-pacing': 'Reading: pacing (reached in time)', 'vocab-completion': 'Sentence completions', 'analogy-bridge': 'Analogy bridges', 'timed': 'Timed section pacing',
+    'percent-of': 'Percent of a number / finding the whole', 'rd-pacing': 'Reading: pacing (reached in time)', 'vocab-completion': 'Sentence completions', 'analogy-bridge': 'Analogy bridges', 'timed': 'Timed section pacing',
   },
 
   sets: [
+    /* ==================== LESSONS · mastery checks ==================== */
+    {
+      "id": "lesson1_percent_check",
+      "day": "Lessons · Core Concepts",
+      "availableFrom": "2026-09-02",
+      "order": 1,
+      "title": "Lesson 1 · Percent Is a Multiplier — mastery check",
+      "subtitle": "5 questions · 8 minutes · take after the lesson",
+      "scoring": "isee",
+      "timeLimitS": 480,
+      "intro": [
+        {
+          "type": "directions",
+          "html": "<b>Mastery check.</b> Five questions, eight minutes, no notes. Each question has four suggested answers; select the best one and answer every question. Four of five or better means the concept is in."
+        }
+      ],
+      "items": [
+        {
+          "id": "pm1",
+          "type": "mc",
+          "skills": [
+            "percent-of"
+          ],
+          "prompt": "What is 35% of 60?",
+          "choices": [
+            [
+              "A",
+              "21"
+            ],
+            [
+              "B",
+              "24"
+            ],
+            [
+              "C",
+              "25"
+            ],
+            [
+              "D",
+              "35"
+            ]
+          ],
+          "answer": "A",
+          "explain": "$0.35 \\times 60 = 21$."
+        },
+        {
+          "id": "pm2",
+          "type": "mc",
+          "skills": [
+            "reverse-percent"
+          ],
+          "prompt": "After a 40% discount, a tent costs \\$72. What was the original price?",
+          "choices": [
+            [
+              "A",
+              "\\$100.80"
+            ],
+            [
+              "B",
+              "\\$115.20"
+            ],
+            [
+              "C",
+              "\\$120"
+            ],
+            [
+              "D",
+              "\\$180"
+            ]
+          ],
+          "answer": "C",
+          "explain": "40% off leaves 60%: $72 \\div 0.60 = 120$. Choice (A) multiplies by 1.4, which applies the percent to the wrong amount."
+        },
+        {
+          "id": "pm3",
+          "type": "mc",
+          "skills": [
+            "percent-chain"
+          ],
+          "prompt": "A price rises 10% and then falls 10%. What is the net change?",
+          "choices": [
+            [
+              "A",
+              "No change"
+            ],
+            [
+              "B",
+              "A decrease of 1%"
+            ],
+            [
+              "C",
+              "An increase of 1%"
+            ],
+            [
+              "D",
+              "A decrease of 20%"
+            ]
+          ],
+          "answer": "B",
+          "explain": "$1.10 \\times 0.90 = 0.99$: down 1%. The 10% drop was taken from a larger number than the 10% rise was added to."
+        },
+        {
+          "id": "pm4",
+          "type": "mc",
+          "skills": [
+            "percent-of",
+            "reverse-percent"
+          ],
+          "prompt": "48 is 60% of what number?",
+          "choices": [
+            [
+              "A",
+              "28.8"
+            ],
+            [
+              "B",
+              "80"
+            ],
+            [
+              "C",
+              "108"
+            ],
+            [
+              "D",
+              "8"
+            ]
+          ],
+          "answer": "B",
+          "explain": "The whole is missing: $48 \\div 0.60 = 80$."
+        },
+        {
+          "id": "pm5",
+          "type": "mc",
+          "skills": [
+            "reverse-percent"
+          ],
+          "prompt": "After a 20% raise, an employee earns \\$30,000 per year. What was the salary before the raise?",
+          "choices": [
+            [
+              "A",
+              "\\$24,000"
+            ],
+            [
+              "B",
+              "\\$25,000"
+            ],
+            [
+              "C",
+              "\\$36,000"
+            ],
+            [
+              "D",
+              "\\$28,000"
+            ]
+          ],
+          "answer": "B",
+          "explain": "A raise makes the multiplier 1.20: $30{,}000 \\div 1.20 = 25{,}000$. Choice (A) multiplies by 0.80, treating 20% of the new salary as the raise."
+        }
+      ]
+    },
+    {
+      "id": "lesson2_probability_check",
+      "day": "Lessons · Core Concepts",
+      "availableFrom": "2026-09-02",
+      "order": 2,
+      "title": "Lesson 2 · Probability — mastery check",
+      "subtitle": "5 questions · 8 minutes · take after the lesson",
+      "scoring": "isee",
+      "timeLimitS": 480,
+      "intro": [
+        {
+          "type": "directions",
+          "html": "<b>Mastery check.</b> Five questions, eight minutes, no notes. Each question has four suggested answers; select the best one and answer every question. Four of five or better means the concept is in."
+        }
+      ],
+      "items": [
+        {
+          "id": "pb1",
+          "type": "mc",
+          "skills": [
+            "prob-mult"
+          ],
+          "prompt": "A spinner has 12 equal sections numbered 1 through 12. It is spun twice. What is the probability that both spins land on a multiple of 5?",
+          "choices": [
+            [
+              "A",
+              "$\\tfrac{1}{6}$"
+            ],
+            [
+              "B",
+              "$\\tfrac{1}{36}$"
+            ],
+            [
+              "C",
+              "$\\tfrac{1}{3}$"
+            ],
+            [
+              "D",
+              "$\\tfrac{1}{12}$"
+            ]
+          ],
+          "answer": "B",
+          "explain": "Multiples of 5: 5 and 10, so $\\tfrac{2}{12} = \\tfrac{1}{6}$ per spin. Both: $\\tfrac{1}{6} \\times \\tfrac{1}{6} = \\tfrac{1}{36}$. Choice (A) is one spin only."
+        },
+        {
+          "id": "pb2",
+          "type": "mc",
+          "skills": [
+            "prob-noreplace",
+            "prob-mult"
+          ],
+          "prompt": "A bag holds 5 red and 3 blue marbles. Two marbles are drawn without replacement. What is the probability that both are blue?",
+          "choices": [
+            [
+              "A",
+              "$\\tfrac{9}{64}$"
+            ],
+            [
+              "B",
+              "$\\tfrac{3}{28}$"
+            ],
+            [
+              "C",
+              "$\\tfrac{3}{8}$"
+            ],
+            [
+              "D",
+              "$\\tfrac{6}{8}$"
+            ]
+          ],
+          "answer": "B",
+          "explain": "$\\tfrac{3}{8} \\times \\tfrac{2}{7} = \\tfrac{6}{56} = \\tfrac{3}{28}$. Choice (A) assumes replacement."
+        },
+        {
+          "id": "pb3",
+          "type": "mc",
+          "skills": [
+            "prob-mult"
+          ],
+          "prompt": "A box contains 4 green and 6 yellow tokens. One token is drawn and returned, then a second token is drawn. Which expression gives the probability that both tokens are yellow?",
+          "choices": [
+            [
+              "A",
+              "$\\tfrac{6}{10} \\times \\tfrac{6}{10}$"
+            ],
+            [
+              "B",
+              "$\\tfrac{6}{10} \\times \\tfrac{5}{9}$"
+            ],
+            [
+              "C",
+              "$\\tfrac{3}{5}$"
+            ],
+            [
+              "D",
+              "$\\tfrac{6}{10} + \\tfrac{6}{10}$"
+            ]
+          ],
+          "answer": "A",
+          "explain": "Returned means the second draw has the same probability: $\\tfrac{6}{10}$ twice, multiplied. Choice (B) is without replacement; choice (D) adds."
+        },
+        {
+          "id": "pb4",
+          "type": "mc",
+          "skills": [
+            "qc-boundary"
+          ],
+          "prompt": "Pieces of paper numbered 6 through 13 are placed in a hat. One is drawn at random. What is the probability that the number is greater than 10?",
+          "choices": [
+            [
+              "A",
+              "$\\tfrac{3}{8}$"
+            ],
+            [
+              "B",
+              "$\\tfrac{3}{7}$"
+            ],
+            [
+              "C",
+              "$\\tfrac{4}{8}$"
+            ],
+            [
+              "D",
+              "$\\tfrac{3}{13}$"
+            ]
+          ],
+          "answer": "A",
+          "explain": "Papers 6 through 13 are eight numbers. Greater than 10: 11, 12, 13. $\\tfrac{3}{8}$. Choice (B) miscounts the sample space as 7; choice (C) includes 10."
+        },
+        {
+          "id": "pb5",
+          "type": "mc",
+          "skills": [
+            "prob-mult"
+          ],
+          "prompt": "A fair coin is flipped three times. What is the probability of at least one tail?",
+          "choices": [
+            [
+              "A",
+              "$\\tfrac{1}{8}$"
+            ],
+            [
+              "B",
+              "$\\tfrac{3}{8}$"
+            ],
+            [
+              "C",
+              "$\\tfrac{1}{2}$"
+            ],
+            [
+              "D",
+              "$\\tfrac{7}{8}$"
+            ]
+          ],
+          "answer": "D",
+          "explain": "No tails at all (three heads) is $\\tfrac{1}{8}$; at least one tail is $1 - \\tfrac{1}{8} = \\tfrac{7}{8}$."
+        }
+      ]
+    },
+    {
+      "id": "lesson3_statistics_check",
+      "day": "Lessons · Core Concepts",
+      "availableFrom": "2026-09-02",
+      "order": 3,
+      "title": "Lesson 3 · Mean, Median, and Data in Tables — mastery check",
+      "subtitle": "5 questions · 8 minutes · take after the lesson",
+      "scoring": "isee",
+      "timeLimitS": 480,
+      "intro": [
+        {
+          "type": "directions",
+          "html": "<b>Mastery check.</b> Five questions, eight minutes, no notes. Each question has four suggested answers; select the best one and answer every question. Four of five or better means the concept is in."
+        }
+      ],
+      "items": [
+        {
+          "id": "st1",
+          "type": "mc",
+          "skills": [
+            "stats-median-grouped"
+          ],
+          "prompt": "The table shows the hours of sleep reported by 13 students. What is the median?<table class=\"dtable\"><tr><th>Hours</th><td>6</td><td>7</td><td>8</td><td>9</td></tr><tr><th>Students</th><td>2</td><td>4</td><td>5</td><td>2</td></tr></table>",
+          "choices": [
+            [
+              "A",
+              "7"
+            ],
+            [
+              "B",
+              "7.5"
+            ],
+            [
+              "C",
+              "8"
+            ],
+            [
+              "D",
+              "8.5"
+            ]
+          ],
+          "answer": "C",
+          "explain": "$n = 13$, position 7. Running total 2, 6, 11, 13. Position 7 falls in the \"8\" column."
+        },
+        {
+          "id": "st2",
+          "type": "mc",
+          "skills": [
+            "stats-mean"
+          ],
+          "prompt": "Six test scores have a mean of 80. Five of the scores are 72, 85, 90, 78, and 80. What is the sixth score?",
+          "choices": [
+            [
+              "A",
+              "75"
+            ],
+            [
+              "B",
+              "80"
+            ],
+            [
+              "C",
+              "81"
+            ],
+            [
+              "D",
+              "95"
+            ]
+          ],
+          "answer": "A",
+          "explain": "Total $= 80 \\times 6 = 480$; the five known add to 405; $480 - 405 = 75$."
+        },
+        {
+          "id": "st3",
+          "type": "mc",
+          "skills": [
+            "stats-weighted-mean"
+          ],
+          "prompt": "Three quiz scores are 70, 80, and 90. A project counts twice as much as a quiz. What project score raises the overall mean by 4 points?",
+          "choices": [
+            [
+              "A",
+              "84"
+            ],
+            [
+              "B",
+              "88"
+            ],
+            [
+              "C",
+              "90"
+            ],
+            [
+              "D",
+              "96"
+            ]
+          ],
+          "answer": "C",
+          "explain": "Current mean 80, target 84. Total weight $3 + 2 = 5$: $\\dfrac{240 + 2x}{5} = 84 \\Rightarrow 2x = 180 \\Rightarrow x = 90$."
+        },
+        {
+          "id": "st4",
+          "type": "mc",
+          "skills": [
+            "stats-mean-median-effect"
+          ],
+          "prompt": "Fifteen values have a mean of 50 and a median of 48. The largest value is increased by 30. Which is true of the new mean and median?",
+          "choices": [
+            [
+              "A",
+              "Mean 52, median 48"
+            ],
+            [
+              "B",
+              "Mean 52, median 50"
+            ],
+            [
+              "C",
+              "Mean 50, median 48"
+            ],
+            [
+              "D",
+              "Mean 80, median 48"
+            ]
+          ],
+          "answer": "A",
+          "explain": "Total up 30 over 15 values: mean up 2. The largest value was already above the middle and stays there: median unchanged."
+        },
+        {
+          "id": "st5",
+          "type": "mc",
+          "skills": [
+            "stats-median-grouped"
+          ],
+          "prompt": "A histogram shows 20 values: six 1s, four 2s, four 3s, and six 4s. What is the median?",
+          "choices": [
+            [
+              "A",
+              "2"
+            ],
+            [
+              "B",
+              "2.5"
+            ],
+            [
+              "C",
+              "3"
+            ],
+            [
+              "D",
+              "3.5"
+            ]
+          ],
+          "answer": "B",
+          "explain": "$n = 20$, positions 10 and 11. Running total 6, 10, 14, 20. Position 10 is the last 2; position 11 is the first 3. Median $= (2 + 3) \\div 2 = 2.5$."
+        }
+      ]
+    },
     /* ==================== DAY 1 ==================== */
     {
       id: 'sep1_d1_warmup', day: 'Day 1 · Tue Sept 1', availableFrom: '2026-09-01', order: 10,
