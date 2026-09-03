@@ -65,6 +65,31 @@
     if (name === 'coach') Dashboard.render($('#coach-panel'));
   }
 
+  // ---------- money widgets (shared by Today, wrap-up, Money) ----------
+  const fmtDue = d => { if (!d) return ''; const t = new Date().toISOString().slice(0, 10); return d <= t ? 'today' : new Date(d + 'T12:00:00').toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }); };
+  const nextMilestone = (earned, ms) => ms.find(m => m > earned) ?? null;
+  function milestoneBar(earned, pv) {
+    const goal = nextMilestone(earned, pv.milestones) ?? pv.milestones[pv.milestones.length - 1];
+    const prev = [...pv.milestones].reverse().find(m => m <= earned) ?? 0;
+    const p = Math.max(0, Math.min(100, Math.round(100 * (earned - prev) / (goal - prev))));
+    return el('div', 'mbar-wrap', `<div class="mbar-lbl"><span>${money(earned)} earned</span><span>next milestone ${money(goal)}</span></div><div class="mbar"><div class="mfill" style="width:${p}%"></div></div>`);
+  }
+  function whatsLeft(r) {
+    const n = r.stepsLeft;
+    return `${n} more right${r.needQuestion && n <= 1 ? ' (in a question)' : ''}${r.due ? ` · ${fmtDue(r.due)}` : ''}`;
+  }
+  async function moneyStrip() {
+    if (profile.role !== 'student' || !profile.budget_cents) return null;
+    const [m, pv] = [await Engine.moneySummary(), Engine.payoutPreview()];
+    const earned = m.provisional + m.vested;
+    const box = el('div', 'money-strip');
+    box.append(milestoneBar(earned, pv));
+    const next = pv.rows[0];
+    if (next) box.append(el('p', 'money-next', `Closest payout: <b>${esc(next.word)}</b> +${money(next.value)} — ${esc(whatsLeft(next))}`));
+    else box.append(el('p', 'money-next', 'Master words to start earning — see the Money tab for the rules.'));
+    return box;
+  }
+
   // ---------- today ----------
   async function renderToday() {
     const c = Engine.wordCounts();
@@ -85,6 +110,7 @@
       const btn = el('button', 'btn primary big', 'Start today\'s 15 minutes');
       btn.addEventListener('click', () => startSession('drill'));
       const wrap = el('div', 'center-actions'); wrap.append(btn); card.append(wrap);
+      try { const ms = await moneyStrip(); if (ms) card.append(ms); } catch (e) { /* money strip is optional */ }
     }
     host.append(card);
   }
@@ -285,7 +311,7 @@
     const cls = res.rushed ? 'rushed' : (correct ? 'good' : 'bad');
     const head = res.rushed ? '⚡ Too fast to count — slow down, it\'s not a race'
       : res.alreadyKnown ? '✓ You already own this one — it leaves your ladder (no pay for words you knew!)'
-      : res.masteredNow ? `🏆 MASTERED${res.paidCents ? ' — +' + money(res.paidCents) + ' (vests at checkpoint)' : ''}`
+      : res.masteredNow ? `🏆 MASTERED${res.paidCents ? ' — +' + money(res.paidCents) : ''}`
       : correct ? '✓ Nice' : '✗ Not this time — it goes back in the ladder';
     const fb = el('div', 'feedback ' + cls, `<div>${head}</div><div class="defline">${defLine || ''}</div>`);
     card.append(fb);
@@ -347,8 +373,9 @@
       el('div', 'stat', `<b>${Math.round(focus * 100)}%</b><span>focus</span>`),
       el('div', 'stat', `<b>${session.mastered.length}</b><span>mastered</span>`),
     );
-    if (session.paid) stats.append(el('div', 'stat money', `<b>+${money(session.paid)}</b><span>earned (vests at checkpoint)</span>`));
+    if (session.paid) stats.append(el('div', 'stat money', `<b>+${money(session.paid)}</b><span>earned today</span>`));
     card.append(stats);
+    if (session.kind !== 'diagnostic') { try { const ms = await moneyStrip(); if (ms) card.append(ms); } catch (e) { /* optional */ } }
     if (session.kind === 'diagnostic') {
       const c = Engine.wordCounts();
       const more = Engine.needsDiagnostic();
@@ -395,17 +422,38 @@
   async function renderMoney() {
     const host = $('#money-panel'); host.innerHTML = '<div class="loading">counting…</div>';
     const m = await Engine.moneySummary();
+    const pv = Engine.payoutPreview();
+    const earned = m.provisional + m.vested;
     host.innerHTML = '';
     const card = el('div', 'card');
     card.append(el('h2', null, 'Money'));
-    card.append(el('div', 'money-big', money(m.vested)));
-    card.append(el('div', 'money-sub', `vested (yours) · ${money(m.provisional)} pending checkpoint`));
-    const ul = el('ul', 'ledger-list');
-    for (const l of m.entries) {
-      const label = { provisional: 'earned', vest: 'vested', revert: 'returned', bonus: 'bonus', settle: 'paid out' }[l.kind] || l.kind;
-      ul.append(el('li', null, `<span>${esc(l.note || label)}</span><span class="${l.kind === 'vest' || l.kind === 'bonus' ? 'vested' : 'provisional'}">${l.cents >= 0 ? '+' : ''}${money(l.cents)} ${label}</span>`));
+    card.append(el('div', 'money-big', money(earned)));
+    card.append(el('div', 'money-sub', `earned so far · ${money(m.vested)} locked in · ${money(pv.budgetCents)} budget`));
+    card.append(milestoneBar(earned, pv));
+    const tier3 = pv.payCents[3], tier2 = pv.payCents[2];
+    const rules = el('div', 'money-rules');
+    rules.innerHTML = `<h3>How you earn</h3><ul>
+      <li><b>Master a word, get paid.</b> Hard words (tier 3) pay ${money(tier3)}, medium words (tier 2) pay ${money(tier2)}.</li>
+      <li><b>Mastered means:</b> 3 right in a row, seen both as a flashcard and inside a real question, across spaced reviews (${pv.boxDays[1]} day, ${pv.boxDays[2]} days, ${pv.boxDays[3]} days apart). A miss sends the word back to the start. The first payouts land about 5 days after you first learn a word.</li>
+      <li><b>Early words are worth more.</b> Full pay until ${esc(fmtDue(pv.fullPayUntil))}${pv.mult < 1 ? ` (now paying ${Math.round(pv.mult * 100)}%)` : ''}. After that the rate steps down to 75%, 50%, then 35%.</li>
+      <li><b>In training right now:</b> ${pv.rows.length} word${pv.rows.length === 1 ? '' : 's'} worth <b>${money(pv.potentialCents)}</b> when mastered.</li>
+    </ul>`;
+    card.append(rules);
+    if (pv.rows.length) {
+      card.append(el('h3', 'money-h', 'Closest to paying out'));
+      const tbl = el('table', 'tbl', '<tr><th>word</th><th>worth</th><th>what\'s left</th></tr>');
+      for (const r of pv.rows.slice(0, 10)) tbl.insertAdjacentHTML('beforeend', `<tr><td><b>${esc(r.word)}</b></td><td class="provisional">+${money(r.value)}</td><td>${esc(whatsLeft(r))}</td></tr>`);
+      card.append(tbl);
     }
-    card.append(ul);
+    if (m.entries.length) {
+      card.append(el('h3', 'money-h', 'Ledger'));
+      const ul = el('ul', 'ledger-list');
+      for (const l of m.entries) {
+        const label = { provisional: 'earned', vest: 'locked in', revert: 'returned', bonus: 'bonus', settle: 'paid out' }[l.kind] || l.kind;
+        ul.append(el('li', null, `<span>${esc(l.note || label)}</span><span class="${l.kind === 'vest' || l.kind === 'bonus' ? 'vested' : 'provisional'}">${l.cents >= 0 ? '+' : ''}${money(l.cents)} ${label}</span>`));
+      }
+      card.append(ul);
+    }
     host.append(card);
   }
 

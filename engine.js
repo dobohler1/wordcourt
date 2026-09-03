@@ -384,6 +384,31 @@ const Engine = (() => {
     return c;
   }
 
+  /** Payout ladder: what every in-training word is worth and how many correct answers it is from paying out. */
+  const MILESTONES = [500, 1000, 2500, 5000];
+  function payoutPreview() {
+    const mult = T.seasonMultipliers[weekIndex()];
+    const start = new Date(me.created_at || Date.now()).toISOString().slice(0, 10);
+    const rows = [];
+    for (const s of state.values()) {
+      const w = wordsById.get(s.word_id); if (!w) continue;
+      const base = T.payCents[w.tier] || 0; if (!base) continue;
+      if (s.state === 'mastered' || s.state === 'known') continue;
+      const value = Math.round(base * mult);
+      const streakLeft = Math.max(0, T.masteryStreak - (s.correct_streak || 0));
+      const boxLeft = Math.max(0, 3 - (s.box || 0));
+      const needQuestion = !(s.formats_hit || []).includes('question');
+      rows.push({ word: w.word, tier: w.tier, value, stepsLeft: Math.max(streakLeft, boxLeft, needQuestion ? 1 : 0), needQuestion, due: s.due_on, streak: s.correct_streak || 0, box: s.box || 0 });
+    }
+    rows.sort((a, b) => a.stepsLeft - b.stepsLeft || String(a.due || '').localeCompare(String(b.due || '')) || b.value - a.value);
+    return {
+      mult, fullPayUntil: addDays(start, 21), rows,
+      potentialCents: rows.reduce((t, r) => t + r.value, 0),
+      budgetCents: me.budget_cents || 0, milestones: MILESTONES,
+      payCents: T.payCents, boxDays: T.boxIntervals,
+    };
+  }
+
   async function moneySummary(userId) {
     const uid = userId || me.id;
     const { data, error } = await db.from('wc_ledger').select('*').eq('user_id', uid).order('created_at', { ascending: false });
@@ -399,7 +424,7 @@ const Engine = (() => {
 
   return {
     T, init, needsDiagnostic, buildSession, buildDiagnostic, openSession, closeSession,
-    processAnswer, seedDiagnosticResult, logDiagnosticAnswer, streak, wordCounts, moneySummary,
+    processAnswer, seedDiagnosticResult, logDiagnosticAnswer, streak, wordCounts, moneySummary, payoutPreview,
     get me() { return me; }, get words() { return words; }, get state() { return state; },
     get skills() { return skills; }, get strategy() { return strategy; },
     clusterFor: id => (clusterOf.get(id) || [])[0] || null,

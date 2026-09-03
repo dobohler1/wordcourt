@@ -228,3 +228,15 @@ main.wide { max-width: 52rem; }
 .gcell.on { background: var(--good); color: #10281a; font-weight: 700; } .gcell.rush { background: var(--gold); color: #3a2c00; font-weight: 700; }
 .dash-details { margin-top: 1.2rem; } .dash-details summary { cursor: pointer; color: var(--muted); font-size: .9rem; }
 .dash-details .tbl { margin-top: .6rem; }
+
+/* ---------- money ladder ---------- */
+.money-strip { margin-top: 1.25rem; border-top: 1px solid var(--line); padding-top: 1rem; }
+.mbar-wrap { margin: .5rem 0; }
+.mbar-lbl { display: flex; justify-content: space-between; font-size: .85rem; color: var(--muted); margin-bottom: .3rem; }
+.mbar { height: 10px; background: var(--panel2); border-radius: 5px; overflow: hidden; }
+.mfill { height: 100%; background: var(--gold); border-radius: 5px; min-width: 2px; }
+.money-next { margin: .5rem 0 0; font-size: .95rem; } .money-next b { color: var(--peach); }
+.money-rules { background: var(--panel2); border-radius: 10px; padding: .8rem 1rem; margin: 1rem 0; font-size: .92rem; }
+.money-rules h3, .money-h { margin: 0 0 .4rem; font-size: .78rem; text-transform: uppercase; letter-spacing: .1em; color: var(--accent); }
+.money-h { margin-top: 1.4rem; }
+.money-rules ul { margin: 0; padding-left: 1.1rem; } .money-rules li { margin: .35rem 0; }
