@@ -35,8 +35,9 @@
     $('#tab-coach').hidden = profile.role !== 'coach';
     await Engine.init(sb, profile);
     Drills.init(sb, profile);
+    Dashboard.init(sb, profile);
     Engine.streak().then(n => { $('#streak-chip').textContent = '🔥 ' + n; });
-    showTab('today');
+    showTab(profile.role === 'coach' ? 'coach' : 'today');
   }
 
   $('#login-form').addEventListener('submit', async e => {
@@ -56,11 +57,12 @@
     document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
     for (const v of document.querySelectorAll('.tab-view')) v.hidden = true;
     $('#tab-view-' + name).hidden = false;
+    $('main').classList.toggle('wide', name === 'coach');
     if (name === 'today') renderToday();
     if (name === 'drills') Drills.renderList($('#drills-panel'));
     if (name === 'words') renderWords();
     if (name === 'money') renderMoney();
-    if (name === 'coach') renderCoach();
+    if (name === 'coach') Dashboard.render($('#coach-panel'));
   }
 
   // ---------- today ----------
@@ -407,48 +409,7 @@
     host.append(card);
   }
 
-  // ---------- coach panel ----------
-  async function renderCoach() {
-    const host = $('#coach-panel'); host.innerHTML = '<div class="loading">gathering…</div>';
-    const { data: fam } = await sb.from('wc_profiles').select('*').neq('id', profile.id);
-    host.innerHTML = '';
-    if (!fam?.length) { host.append(el('div', 'card', '<h2>Coach</h2><p class="sub">No students in your family yet.</p>')); return; }
-    for (const s of fam) {
-      const card = el('div', 'card coach-student');
-      card.append(el('h2', null, `${esc(s.handle)}`));
-      const [ws, sess, m, teach] = await Promise.all([
-        sb.from('wc_word_state').select('state').eq('user_id', s.id),
-        sb.from('wc_sessions').select('day, xp, focus, kind, completed').eq('user_id', s.id).order('day', { ascending: false }).limit(14),
-        Engine.moneySummary(s.id),
-        sb.from('wc_teach_entries').select('sentence, created_at, word_id').eq('user_id', s.id).order('created_at', { ascending: false }).limit(5),
-      ]);
-      const counts = {};
-      for (const r of ws.data || []) counts[r.state] = (counts[r.state] || 0) + 1;
-      const stats = el('div', 'stat-row');
-      stats.append(
-        el('div', 'stat', `<b>${counts.mastered || 0}</b><span>mastered</span>`),
-        el('div', 'stat', `<b>${(counts.learning || 0) + (counts.review || 0)}</b><span>in training</span>`),
-        el('div', 'stat money', `<b>${money(m.provisional)}</b><span>pending</span>`),
-        el('div', 'stat money', `<b>${money(m.vested)}</b><span>owed (vested)</span>`),
-      );
-      card.append(stats);
-      const lowFocus = (sess.data || []).filter(x => x.completed && x.focus != null && x.focus < 0.7);
-      if (lowFocus.length) card.append(el('p', 'flag', `⚠ ${lowFocus.length} recent session(s) with focus under 70% — rushing detected.`));
-      const tbl = el('table', 'tbl', '<tr><th>day</th><th>kind</th><th>xp</th><th>focus</th></tr>');
-      for (const x of (sess.data || []).slice(0, 7)) {
-        tbl.insertAdjacentHTML('beforeend', `<tr><td>${x.day}</td><td>${x.kind}</td><td>${x.xp ?? '—'}</td><td>${x.focus != null ? Math.round(x.focus * 100) + '%' : '—'}</td></tr>`);
-      }
-      card.append(tbl);
-      if (teach.data?.length) {
-        card.append(el('h2', null, 'Notebook (latest)'));
-        const ul = el('ul', 'miss-list');
-        for (const t of teach.data) ul.append(el('li', null, `“${esc(t.sentence)}”`));
-        card.append(ul);
-      }
-      try { await Drills.renderCoach(card, s); } catch (e) { card.append(el('p', 'flag', 'Drills: ' + esc(e.message))); }
-      host.append(card);
-    }
-  }
+  // coach panel → dashboard.js
 
   boot();
 })();

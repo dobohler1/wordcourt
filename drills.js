@@ -395,5 +395,5 @@ const Drills = (() => {
     }
   }
 
-  return { init, renderList, renderCoach, startSet, _grade: grade, _normNum: normNum };
+  return { init, renderList, renderCoach, startSet, _grade: grade, _normNum: normNum, _loadRuns: loadRuns, _loadAttempts: loadAttempts };
 })();

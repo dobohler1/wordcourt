@@ -203,3 +203,28 @@ mjx-container { font-size: 105%; }
   .topbar { flex-wrap: wrap; }
   .rings { justify-content: center; }
 }
+
+/* ---------- coach dashboard ---------- */
+main.wide { max-width: 52rem; }
+.dash-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: .75rem; }
+.dash-head h2 { margin: 0; font-size: 1.4rem; } .dash-head .sub { margin: 0; }
+.dash-h { margin: 1.4rem 0 .4rem; font-size: .78rem; text-transform: uppercase; letter-spacing: .1em; color: var(--accent); }
+.stat.good b { color: var(--good); } .stat.warn b { color: var(--gold); } .stat.bad b { color: var(--bad); }
+.next-list { margin: 0; padding: 0; list-style: none; }
+.next-list li { padding: .4rem 0; border-top: 1px solid var(--line); font-size: .95rem; }
+.next-list li:first-child { border-top: none; }
+.pill { display: inline-block; font-size: .7rem; text-transform: uppercase; letter-spacing: .06em; padding: .05rem .5rem; border-radius: 999px; background: var(--panel2); color: var(--muted); margin-right: .3rem; vertical-align: middle; }
+.pill.warn { background: #4a3d14; color: var(--gold); } .pill.bad { background: #4a2020; color: var(--bad); }
+.dim { color: var(--muted); } .small { font-size: .9rem; margin: .4rem 0; }
+.ok { color: var(--good); } .no { color: var(--bad); }
+.tbl td.num { white-space: nowrap; }
+.skbar { width: 100%; min-width: 6rem; height: 8px; background: var(--panel2); border-radius: 4px; overflow: hidden; }
+.skfill { height: 100%; border-radius: 4px; } .skfill.good { background: var(--good); } .skfill.warn { background: var(--gold); } .skfill.bad { background: var(--bad); }
+.trend-wrap { overflow-x: auto; } .trend { width: 100%; max-width: 40rem; height: auto; display: block; }
+.trend .ax { stroke: var(--line); stroke-width: 1; } .trend .tk { fill: var(--muted); font-size: 10px; }
+.trend .tb.good { fill: var(--good); } .trend .tb.warn { fill: var(--gold); } .trend .tb.bad { fill: var(--bad); }
+.grid14 { display: grid; grid-template-columns: repeat(14, 1fr); gap: 4px; max-width: 30rem; }
+.gcell { aspect-ratio: 1; border-radius: 5px; font-size: .7rem; display: flex; align-items: center; justify-content: center; background: var(--panel2); color: var(--muted); }
+.gcell.on { background: var(--good); color: #10281a; font-weight: 700; } .gcell.rush { background: var(--gold); color: #3a2c00; font-weight: 700; }
+.dash-details { margin-top: 1.2rem; } .dash-details summary { cursor: pointer; color: var(--muted); font-size: .9rem; }
+.dash-details .tbl { margin-top: .6rem; }

@@ -2531,7 +2531,7 @@ window.WORDCOURT_DRILLS = {
     },
     {
       id: 'sep1_d3_secondpass', day: 'Day 3 · Thu Sept 3', availableFrom: '2026-09-03', order: 110,
-      title: 'Second Pass — Test Innovators', subtitle: 'Every question missed on Wednesday, in a fresh form', scoring: 'none', timeLimitS: null, dynamicFrom: ['sep1_d2_review_ssat','sep1_d2_review_qr','sep1_d2_review_ma'],
+      title: 'Second Pass — Wednesday’s Misses', subtitle: 'Every question missed on Wednesday, in a fresh form', scoring: 'none', timeLimitS: null, dynamicFrom: ['sep1_d2_review_ssat','sep1_d2_review_qr','sep1_d2_review_ma'],
       intro: [{ type: 'directions', html: '<b>Directions:</b> This set is built automatically from Wednesday\'s three review sets — every question answered incorrectly, presented again with the same structure. Answer every question. A question missed both days needs a new error-log line beginning <i>"Different this time:"</i> that names what changed.' }],
       items: [],
     },
