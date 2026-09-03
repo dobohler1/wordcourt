@@ -204,12 +204,15 @@ const Drills = (() => {
       for (const p of set.passages) {
         const wrap = el('div', 'card');
         wrap.append(el('div', 'drill-passage', p.html));
-        const noteRow = el('div', 'drill-note');
-        noteRow.append(el('label', null, 'The author\'s point is …'));
-        const ta = el('textarea'); ta.rows = 2; ta.placeholder = 'one sentence, in your words — the questions open when it is written';
-        const qs = el('div'); qs.hidden = true;
-        ta.addEventListener('input', () => { active.notes.set(p.id, ta.value); qs.hidden = words(ta.value) < 5; });
-        noteRow.append(ta); wrap.append(noteRow);
+        const qs = el('div');
+        if (!set.noGate) {   // house rule for the booklet drills; standardized-test-format sets set noGate: true
+          const noteRow = el('div', 'drill-note');
+          noteRow.append(el('label', null, 'The author\'s point is …'));
+          const ta = el('textarea'); ta.rows = 2; ta.placeholder = 'one sentence, in your words — the questions open when it is written';
+          qs.hidden = true;
+          ta.addEventListener('input', () => { active.notes.set(p.id, ta.value); qs.hidden = words(ta.value) < 5; });
+          noteRow.append(ta); wrap.append(noteRow);
+        }
         items.filter(i => i.passage === p.id).forEach((it, idx) => qs.append(itemNode(it, items.indexOf(it) + 1)));
         wrap.append(qs); form.append(wrap);
       }
