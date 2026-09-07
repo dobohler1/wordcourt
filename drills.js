@@ -12,6 +12,20 @@ const Drills = (() => {
   const todayStr = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
   const fmtDate = iso => new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
   const typeset = node => { if (window.MathJax?.typesetPromise) window.MathJax.typesetPromise([node]).catch(() => {}); };
+  // soft tones for pacing sets (created on the Begin click so the browser allows audio)
+  let audio = null;
+  function tone(freq, dur) {
+    try {
+      audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+      if (audio.state === 'suspended') audio.resume();
+      const o = audio.createOscillator(), g = audio.createGain();
+      o.type = 'sine'; o.frequency.value = freq;
+      g.gain.setValueAtTime(0.0001, audio.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.2, audio.currentTime + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, audio.currentTime + dur);
+      o.connect(g).connect(audio.destination); o.start(); o.stop(audio.currentTime + dur + 0.05);
+    } catch {}
+  }
 
   let remote = null;   // rows already merged from wc_drill_sets (null = not loaded yet)
   function init(client, prof) { sb = client; profile = prof; remote = null; }
@@ -183,7 +197,9 @@ const Drills = (() => {
   async function beginRun(host, set, items) {
     const { data, error } = await sb.from('wc_drill_runs').insert({ user_id: profile.id, set_id: set.id, scoring: set.scoring || 'none', n_items: items.length }).select().single();
     if (error) { alert('Could not start: ' + error.message); return; }
-    active = { set, items, run: data, startedAt: Date.now(), answers: new Map(), notes: new Map(), timer: null, host };
+    active = { set, items, run: data, startedAt: Date.now(), answers: new Map(), notes: new Map(), timer: null, host,
+      lastAnswerAt: 0, passagesSeen: new Set(), paceToned: false, warned: false };
+    if (set.paceCapS) tone(660, 0.15);   // unlocks audio for the later chimes
     $('#tabs').hidden = true;
     renderForm();
   }
@@ -196,8 +212,17 @@ const Drills = (() => {
     hud.append(el('div', null, `<b>${esc(set.title)}</b>`));
     const prog = el('div', 'drill-prog', `0 / ${items.length}`);
     const clock = el('div', 'drill-clock', set.timeLimitS ? fmtClock(set.timeLimitS) : '');
-    hud.append(prog, clock); host.append(hud);
-    active.prog = prog;
+    hud.append(prog);
+    let pace = null, banner = null;
+    if (set.paceCapS) {
+      // pacing sets: a per-question dwell clock (time since the previous answer) with a soft chime at the cap
+      pace = el('div', 'drill-pace', 'this question 0:00');
+      hud.append(pace);
+      banner = el('div', 'drill-banner'); banner.hidden = true;
+    }
+    hud.append(clock); host.append(hud);
+    if (banner) host.append(banner);
+    active.prog = prog; active.pace = pace; active.banner = banner;
 
     const form = el('div', 'drill-form');
     if (set.passages) {
@@ -253,6 +278,18 @@ const Drills = (() => {
         if (!active || active.run.id !== myRun) { clearInterval(id); return; }
         const left = Math.max(0, Math.round((end - Date.now()) / 1000));
         clock.textContent = fmtClock(left); clock.classList.toggle('warn', left <= 60);
+        if (set.paceCapS) {
+          const dwell = Math.floor((Date.now() - active.startedAt - active.lastAnswerAt) / 1000);
+          const over = dwell > set.paceCapS;
+          pace.textContent = over ? `this question ${fmtClock(dwell)} · bubble your best guess and move on` : `this question ${fmtClock(dwell)}`;
+          pace.classList.toggle('over', over);
+          if (over && !active.paceToned) { active.paceToned = true; tone(880, 0.35); }
+          if (left <= 60 && !active.warned) { active.warned = true; tone(440, 1.2); banner.hidden = false; }
+          if (!banner.hidden) {
+            const n = items.length - active.answers.size;
+            banner.innerHTML = n ? `<b>One minute.</b> Fill every remaining answer now — <b>${n}</b> still blank.` : `<b>One minute.</b> Every question has an answer. Check the ones you circled.`;
+          }
+        }
         if (left <= 0) { clearInterval(id); finishRun(true); }
       }, 500);
       active.timer = id;
@@ -262,7 +299,21 @@ const Drills = (() => {
   const fmtClock = s => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
   function record(item, chosen, extra) {
     if (chosen == null || chosen === '') active.answers.delete(item.id);
-    else active.answers.set(item.id, { chosen, at: Date.now() - active.startedAt, ...(extra || {}) });
+    else {
+      const prev = active.answers.get(item.id);
+      const at = Date.now() - active.startedAt;
+      let pacing = prev ? { dwell_ms: prev.dwell_ms, over_cap: prev.over_cap } : {};
+      if (!prev && active.set.paceCapS) {
+        // dwell = time since the previous answer; the first question of a passage also carries the reading time, so it gets the longer cap
+        const dwell = at - active.lastAnswerAt;
+        let cap = active.set.paceCapS;
+        if (item.passage && !active.passagesSeen.has(item.passage)) { active.passagesSeen.add(item.passage); cap = active.set.paceFirstCapS || cap * 3; }
+        pacing = { dwell_ms: dwell, over_cap: dwell > cap * 1000 };
+        active.lastAnswerAt = at; active.paceToned = false;
+        if (active.pace) { active.pace.classList.remove('over'); active.pace.textContent = 'this question 0:00'; }
+      }
+      active.answers.set(item.id, { chosen, at, ...pacing, ...(extra || {}) });
+    }
     active.prog.textContent = `${active.answers.size} / ${active.items.length}`;
   }
   function itemNode(item, n) {
@@ -316,19 +367,22 @@ const Drills = (() => {
       const a = active.answers.get(item.id);
       const correct = a ? grade(item, a.chosen) : null;
       const note = item.passage ? (active.notes.get(item.passage) || null) : (set.recallPrompt ? (active.notes.get('_recall') || null) : (a?.note || null));
-      return { item, chosen: a?.chosen ?? null, correct, blank: correct == null, timed_out: !a && timedOut, latency_ms: a?.at ?? null, note };
+      return { item, chosen: a?.chosen ?? null, correct, blank: correct == null, timed_out: !a && timedOut, latency_ms: a?.at ?? null, note,
+        dwell_ms: a?.dwell_ms ?? null, over_cap: !!a?.over_cap };
     });
     const nCorrect = results.filter(r => r.correct === true).length, nWrong = results.filter(r => r.correct === false).length, nBlank = results.filter(r => r.blank).length;
     const raw = set.scoring === 'ssat' ? nCorrect - nWrong / 4 : nCorrect;
     const rows = results.map(r => ({
       run_id: run.id, user_id: profile.id, set_id: set.id, item_id: r.item.id, kind: r.item.type, skills: r.item.skills || [],
       chosen: r.chosen, correct: r.correct, blank: r.blank, timed_out: r.timed_out, latency_ms: r.latency_ms, note: r.note,
+      dwell_ms: r.dwell_ms, over_cap: r.over_cap,
     }));
+    const nOverCap = set.paceCapS ? results.filter(r => r.over_cap).length : null;
     const ins = await sb.from('wc_drill_attempts').insert(rows).select();
     if (ins.error) alert('Saving answers failed: ' + ins.error.message);
     const idByItem = new Map((ins.data || []).map(x => [x.item_id, x.id]));
-    await sb.from('wc_drill_runs').update({ finished_at: new Date().toISOString(), duration_s: durationS, timed_out: timedOut, n_items: items.length, n_correct: nCorrect, n_wrong: nWrong, n_blank: nBlank, raw_score: raw, logs_complete: nWrong === 0 }).eq('id', run.id);
-    const done = { ...run, duration_s: durationS, timed_out: timedOut, n_correct: nCorrect, n_wrong: nWrong, n_blank: nBlank, raw_score: raw };
+    await sb.from('wc_drill_runs').update({ finished_at: new Date().toISOString(), duration_s: durationS, timed_out: timedOut, n_items: items.length, n_correct: nCorrect, n_wrong: nWrong, n_blank: nBlank, raw_score: raw, logs_complete: nWrong === 0, n_over_cap: nOverCap, n_unreached: nBlank }).eq('id', run.id);
+    const done = { ...run, duration_s: durationS, timed_out: timedOut, n_correct: nCorrect, n_wrong: nWrong, n_blank: nBlank, raw_score: raw, n_over_cap: nOverCap, n_unreached: nBlank };
     active = null; $('#tabs').hidden = false;
     renderResults(host, set, done, results.map(r => ({ ...r, attemptId: idByItem.get(r.item.id) })));
   }
@@ -337,7 +391,7 @@ const Drills = (() => {
     host.innerHTML = '<div class="loading">loading…</div>';
     const att = await loadAttempts(profile.id, run.id);
     const items = set.dynamicFrom ? (await buildItems(set, profile.id)) : set.items;
-    const results = att.map(a => ({ item: items.find(i => i.id === a.item_id) || { id: a.item_id, type: a.kind, prompt: a.item_id, skills: a.skills }, chosen: a.chosen, correct: a.correct, blank: a.blank, timed_out: a.timed_out, attemptId: a.id, error_log: a.error_log }));
+    const results = att.map(a => ({ item: items.find(i => i.id === a.item_id) || { id: a.item_id, type: a.kind, prompt: a.item_id, skills: a.skills }, chosen: a.chosen, correct: a.correct, blank: a.blank, timed_out: a.timed_out, attemptId: a.id, error_log: a.error_log, dwell_ms: a.dwell_ms, over_cap: a.over_cap }));
     renderResults(host, set, run, results);
   }
 
@@ -349,7 +403,13 @@ const Drills = (() => {
     stats.append(el('div', 'stat', `<b>${run.n_correct}</b><span>correct</span>`), el('div', 'stat', `<b>${run.n_wrong}</b><span>wrong</span>`), el('div', 'stat', `<b>${run.n_blank}</b><span>blank</span>`));
     if (set.scoring === 'ssat') stats.append(el('div', 'stat', `<b>${run.raw_score}</b><span>raw (−¼ per wrong)</span>`));
     if (run.duration_s != null) stats.append(el('div', 'stat', `<b>${fmtClock(run.duration_s)}</b><span>time</span>`));
-    card.append(stats);
+    if (set.paceCapS) {
+      const over = run.n_over_cap ?? results.filter(r => r.over_cap).length;
+      stats.append(el('div', 'stat ' + (over ? 'bad' : 'good'), `<b>${over}</b><span>over ${set.paceCapS} s</span>`));
+      stats.append(el('div', 'stat ' + (run.n_blank ? 'bad' : 'good'), `<b>${run.n_blank}</b><span>unanswered</span>`));
+      card.append(stats);
+      card.append(el('p', 'sub', `The two numbers that matter on a pacing set: <b>${over}</b> over the cap and <b>${run.n_blank}</b> unanswered. The target is zero and zero.`));
+    } else card.append(stats);
     const misses = results.filter(r => r.correct === false);
     if (misses.length) card.append(el('p', 'sub', `${misses.length} to log. For each miss, one line in your own words — <i>what got me</i>. The set is finished when every line is written.`));
     else card.append(el('p', 'sub', run.n_blank ? 'No misses. Blanks are not misses — but check the ones you skipped below.' : 'Clean sheet.'));
@@ -365,7 +425,8 @@ const Drills = (() => {
       const yours = it.type === 'checklist' ? (r.chosen === 'ok' ? '✓' : r.chosen === 'miss' ? '✗' : 'unmarked') : (r.chosen ?? (r.timed_out ? 'not reached' : 'blank'));
       const right = it.type === 'checklist' ? '' : it.type === 'numeric' ? it.answer : it.answer;
       node.append(el('div', 'drill-q', `<span class="drill-n">${mark} ${i + 1}.</span> ${promptHtml(it)}`));
-      if (it.type !== 'checklist') node.append(el('div', 'drill-ans', `Your answer: <b>${esc(yours)}</b>${r.correct === true ? '' : ` · Correct: <b>${esc(right)}</b>`}`));
+      const dwell = set.paceCapS && r.dwell_ms != null ? ` · <span class="${r.over_cap ? 'pace-over' : 'dim'}">⏱ ${fmtClock(Math.round(r.dwell_ms / 1000))}${r.over_cap ? ' — over the cap' : ''}</span>` : '';
+      if (it.type !== 'checklist') node.append(el('div', 'drill-ans', `Your answer: <b>${esc(yours)}</b>${r.correct === true ? '' : ` · Correct: <b>${esc(right)}</b>`}${dwell}`));
       if (it.explain && (r.correct !== true || it.type === 'numeric')) node.append(el('div', 'drill-explain', it.explain));
       if (r.correct === false) {
         const lg = el('div', 'drill-note');
@@ -424,7 +485,7 @@ const Drills = (() => {
     for (const r of finished.slice(0, 12)) {
       const s = setById(r.set_id);
       const sc = s?.type === 'card' ? 'read' : r.scoring === 'ssat' ? `${r.n_correct}/${r.n_items} · raw ${r.raw_score}` : `${r.n_correct}/${r.n_items}`;
-      tbl.insertAdjacentHTML('beforeend', `<tr><td>${fmtDate(r.started_at)}</td><td>${esc(s?.title || r.set_id)}</td><td>${sc}${r.n_blank ? ` · ${r.n_blank} blank` : ''}${r.timed_out ? ' ⏱' : ''}</td><td>${r.duration_s != null ? fmtClock(r.duration_s) : '—'}</td><td>${r.n_wrong === 0 ? '—' : r.logs_complete ? '✓' : 'pending'}</td></tr>`);
+      tbl.insertAdjacentHTML('beforeend', `<tr><td>${fmtDate(r.started_at)}</td><td>${esc(s?.title || r.set_id)}</td><td>${sc}${r.n_blank ? ` · ${r.n_blank} blank` : ''}${r.n_over_cap != null ? ` · <span class="${r.n_over_cap ? 'pace-over' : ''}">${r.n_over_cap} over cap</span>` : ''}${r.timed_out ? ' ⏱' : ''}</td><td>${r.duration_s != null ? fmtClock(r.duration_s) : '—'}</td><td>${r.n_wrong === 0 ? '—' : r.logs_complete ? '✓' : 'pending'}</td></tr>`);
     }
     card.append(tbl);
     const logged = att.filter(a => a.error_log).sort((a, b) => b.created_at < a.created_at ? -1 : 1).slice(0, 8);

@@ -33,6 +33,9 @@ const Engine = (() => {
   let state = new Map();       // word_id -> word_state row
   let skills = new Map();      // skill -> skill_state row
   let strategy = null;         // strategy_content (lessons + signal words) — fetched from static file
+  let deck = null;             // deck.json — a coach-chosen word list that jumps the new-word queue, plus production words
+  let deckSet = new Set();     // lower-cased deck words
+  let teachAt = new Map();     // word_id -> latest wc_teach_entries.created_at (this user)
 
   const todayStr = () => new Date().toISOString().slice(0, 10);
   const addDays = (d, n) => { const x = new Date(d + 'T00:00:00'); x.setDate(x.getDate() + n); return x.toISOString().slice(0, 10); };
@@ -42,7 +45,7 @@ const Engine = (() => {
   // ---------- load ----------
   async function init(supabaseClient, profile) {
     db = supabaseClient; me = profile;
-    const [w, q, c, cw, ws, sk, strat] = await Promise.all([
+    const [w, q, c, cw, ws, sk, strat, deckJson, teachR] = await Promise.all([
       db.from('wc_words').select('*').eq('study', true),
       db.from('wc_questions').select('*'),
       db.from('wc_clusters').select('*'),
@@ -50,9 +53,14 @@ const Engine = (() => {
       db.from('wc_word_state').select('*').eq('user_id', me.id),
       db.from('wc_skill_state').select('*').eq('user_id', me.id),
       fetch('strategy_content.json').then(r => r.json()).catch(() => null),
+      fetch('deck.json').then(r => r.json()).catch(() => null),
+      db.from('wc_teach_entries').select('word_id, created_at').eq('user_id', me.id),
     ]);
     for (const r of [w, q, c, cw, ws, sk]) if (r.error) throw r.error;
     words = w.data; questions = q.data; clusters = c.data; strategy = strat;
+    deck = deckJson && Array.isArray(deckJson.words) ? deckJson : null;
+    deckSet = new Set((deck?.words || []).map(x => String(x).toLowerCase()));
+    for (const t of (teachR?.data || [])) if (!teachAt.has(t.word_id) || teachAt.get(t.word_id) < t.created_at) teachAt.set(t.word_id, t.created_at);
     wordsById = new Map(words.map(x => [x.id, x]));
     wordsByWord = new Map(words.map(x => [x.word, x]));
     questionsById = new Map(questions.map(x => [x.id, x]));
@@ -63,7 +71,14 @@ const Engine = (() => {
     }
     state = new Map(ws.data.map(x => [x.word_id, x]));
     skills = new Map(sk.data.map(x => [x.skill, x]));
+    // production words (deck.production) always have a state row so they surface in reviews and teach prompts
+    if (deck && me.role !== 'coach') {
+      for (const w of productionWords()) if (!state.has(w.id)) await upsertWordState({ word_id: w.id, state: 'learning', box: 0, due_on: todayStr() });
+    }
   }
+  const isDeckWord = w => deckSet.has(String(w.word).toLowerCase());
+  const deckRemaining = () => deckSet.size ? words.filter(w => isDeckWord(w) && !state.has(w.id)).length : 0;
+  const productionWords = () => (deck?.production || []).map(x => wordsByWord.get(String(x).toLowerCase()) || wordsByWord.get(x)).filter(Boolean);
 
   function needsDiagnostic() {
     // scouting continues (across reloads/days) until the frontier is actually mapped
@@ -73,6 +88,7 @@ const Engine = (() => {
   // ---------- priority ladder ----------
   function priorityScore(w) {
     let s = 0;
+    if (isDeckWord(w)) s += 200;   // the coach's deck goes first
     if (w.tested) s += 40;
     if (w.exams.length === 2) s += 25;
     s += (w.tier || 1) * 10;
@@ -186,15 +202,28 @@ const Engine = (() => {
 
   // ---------- session assembly ----------
   function buildSession() {
+    // while the coach's deck still has unstudied words, the session takes more new words (deck.newPerDay) and grows a little
+    const deckOn = deckRemaining() > 0;
+    const newMax = deckOn ? (deck.newPerDay || T.newWordsMax) : T.newWordsMax;
+    const wordBudget = T.wordItemsPerSession + (deckOn ? Math.max(0, newMax - T.newWordsMax + 2) : 0);
     const reviews = dueReviews(T.wordItemsPerSession - 4);
-    const newWords = newWordCandidates(Math.min(T.newWordsMax, T.wordItemsPerSession - reviews.length));
+    const newWords = newWordCandidates(Math.min(newMax, wordBudget - reviews.length));
     const wordItems = shuffle([...reviews, ...newWords]).map((w, i) =>
       flashcardItem(w, i % 2 === 0 ? 'word2def' : 'def2word'));
     const qItems = pickQuestions(T.questionItemsPerSession).map(questionItem);
+    // production words: an original sentence every few days until they convert (deck.production)
+    const every = deck?.productionEveryDays ?? 2;
+    const cutoff = new Date(Date.now() - every * 864e5).toISOString();
+    const prod = productionWords()
+      .filter(w => !(teachAt.get(w.id) > cutoff))
+      .sort((a, b) => (teachAt.get(a.id) || '').localeCompare(teachAt.get(b.id) || ''))
+      .slice(0, 2)
+      .map(w => ({ kind: 'teach', word: w }));
     // teach moment: one learning word gets a sentence prompt at the end
-    const teachCandidates = [...state.values()].filter(s => s.state === 'learning' && s.correct_streak >= 1);
+    const prodIds = new Set(prod.map(t => t.word.id));
+    const teachCandidates = [...state.values()].filter(s => s.state === 'learning' && s.correct_streak >= 1 && !prodIds.has(s.word_id));
     const teach = teachCandidates.length ? [{ kind: 'teach', word: wordsById.get(sample(teachCandidates, 1)[0].word_id) }] : [];
-    return { items: [...wordItems, ...qItems, ...teach], kind: 'drill' };
+    return { items: [...wordItems, ...qItems, ...prod, ...teach], kind: 'drill' };
   }
 
   function buildDiagnostic() {
@@ -427,6 +456,7 @@ const Engine = (() => {
     processAnswer, seedDiagnosticResult, logDiagnosticAnswer, streak, wordCounts, moneySummary, payoutPreview,
     get me() { return me; }, get words() { return words; }, get state() { return state; },
     get skills() { return skills; }, get strategy() { return strategy; },
+    get deck() { return deck; }, deckRemaining, productionWords,
     clusterFor: id => (clusterOf.get(id) || [])[0] || null,
     wordsById: () => wordsById,
   };

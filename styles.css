@@ -162,6 +162,10 @@ main { max-width: 40rem; margin: 0 auto; padding: 1.25rem 1rem 4rem; }
 .drill-prog { color: var(--muted); font-variant-numeric: tabular-nums; }
 .drill-clock { font-weight: 800; font-variant-numeric: tabular-nums; font-size: 1.2rem; min-width: 4rem; text-align: right; }
 .drill-clock.warn { color: var(--bad); }
+.drill-pace { color: var(--muted); font-variant-numeric: tabular-nums; font-size: .9rem; flex: 1; text-align: center; }
+.drill-pace.over { color: var(--bad); font-weight: 700; }
+.drill-banner { position: sticky; top: 6.4rem; z-index: 3; background: #4a2020; color: var(--bad); border: 1px solid var(--bad); border-radius: 10px; padding: .6rem 1rem; margin: 0 0 1rem; font-size: 1rem; }
+.pace-over { color: var(--bad); font-weight: 700; }
 .drill-item { padding: 1rem 0; border-top: 1px solid var(--line); }
 .drill-item:first-child { border-top: none; padding-top: 0; }
 .drill-q { font-size: 1.05rem; margin-bottom: .5rem; }

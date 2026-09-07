@@ -84,6 +84,15 @@ const Dashboard = (() => {
       el('div', 'stat ' + (pendingLogs.length ? 'bad' : ''), `<b>${pendingLogs.length}</b><span>error log${pendingLogs.length === 1 ? '' : 's'} pending</span>`),
       el('div', 'stat', `<b>${due.length}</b><span>words due · ${inTraining.length} in training</span>`),
     );
+    // pacing sets: the two numbers that matter, latest run and 7-day totals
+    const paced = finished.filter(r => r.n_over_cap != null);
+    if (paced.length) {
+      const last = paced[0];
+      const week = paced.filter(r => localDay(r.started_at) >= addDays(today, -7));
+      const wOver = week.reduce((a, r) => a + (r.n_over_cap || 0), 0), wBlank = week.reduce((a, r) => a + (r.n_unreached ?? r.n_blank ?? 0), 0);
+      stats.append(el('div', 'stat ' + ((last.n_over_cap || last.n_blank) ? 'bad' : 'good'),
+        `<b>${last.n_over_cap}/${last.n_blank ?? 0}</b><span>over cap / unanswered, last pacing set · 7 days: ${wOver}/${wBlank} in ${week.length} set${week.length === 1 ? '' : 's'}</span>`));
+    }
     card.append(stats);
 
     // ----- do next -----
@@ -182,7 +191,7 @@ const Dashboard = (() => {
     for (const r of finished) {
       const x = setById(r.set_id);
       const sc = x?.type === 'card' ? 'read' : r.scoring === 'ssat' ? `${r.n_correct}/${r.n_items} · raw ${r.raw_score}` : `${r.n_correct}/${r.n_items}`;
-      tbl.insertAdjacentHTML('beforeend', `<tr><td>${fmtDate(r.started_at)}</td><td>${esc(x?.title || r.set_id)}</td><td>${sc}${r.n_blank ? ` · ${r.n_blank} blank` : ''}${r.timed_out ? ' ⏱' : ''}</td><td>${r.duration_s != null ? fmtClock(r.duration_s) : '—'}</td><td>${r.n_wrong === 0 ? '—' : r.logs_complete ? '✓' : 'pending'}</td></tr>`);
+      tbl.insertAdjacentHTML('beforeend', `<tr><td>${fmtDate(r.started_at)}</td><td>${esc(x?.title || r.set_id)}</td><td>${sc}${r.n_blank ? ` · ${r.n_blank} blank` : ''}${r.n_over_cap != null ? ` · <span class="${r.n_over_cap ? 'pace-over' : ''}">${r.n_over_cap} over cap</span>` : ''}${r.timed_out ? ' ⏱' : ''}</td><td>${r.duration_s != null ? fmtClock(r.duration_s) : '—'}</td><td>${r.n_wrong === 0 ? '—' : r.logs_complete ? '✓' : 'pending'}</td></tr>`);
     }
     det.append(tbl);
     const st = el('table', 'tbl', '<tr><th>day</th><th>kind</th><th>xp</th><th>focus</th><th>time</th></tr>');
