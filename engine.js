@@ -36,28 +36,48 @@ const Engine = (() => {
   let deck = null;             // deck.json — a coach-chosen word list that jumps the new-word queue, plus production words
   let deckSet = new Set();     // lower-cased deck words
   let teachAt = new Map();     // word_id -> latest wc_teach_entries.created_at (this user)
+  let flags = {};              // wc_flags name -> enabled (read once at init)
 
-  const todayStr = () => new Date().toISOString().slice(0, 10);
-  const addDays = (d, n) => { const x = new Date(d + 'T00:00:00'); x.setDate(x.getDate() + n); return x.toISOString().slice(0, 10); };
+  // Dates are the learner's LOCAL calendar day (Phase 1). Before commit "Phase 1" these were UTC, which stamped
+  // evening sessions with the next day; rows from before then were backfilled into local_day from created_at.
+  const pad2 = n => String(n).padStart(2, '0');
+  const dayOf = d => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+  const todayStr = () => dayOf(new Date());
+  const addDays = (d, n) => { const x = new Date(d + 'T12:00:00'); x.setDate(x.getDate() + n); return dayOf(x); };
+  const tzName = () => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || null; } catch { return null; } };
   const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
   const sample = (a, n) => shuffle(a).slice(0, n);
 
+  // wc_answers.kind is constrained to these spellings; item kinds use the section names (plural)
+  const ANSWER_KIND = { flashcard: 'flashcard', synonyms: 'synonym', sentence_completion: 'sentence_completion', analogies: 'analogy', verify: 'verify', teach: 'teach' };
+
+  // A failed write must never pass silently: log it, record it, keep the session going.
+  async function reportError(site, error, detail) {
+    const message = String(error?.message || error || 'unknown').slice(0, 500);
+    try { console.warn('[wordcourt]', site, message, detail || ''); } catch {}
+    try { if (db) await db.from('wc_client_errors').insert({ user_id: me?.id ?? null, site, message, detail: detail ?? null }); } catch {}
+  }
+  const flag = name => !!flags[name];
+
   // ---------- load ----------
-  async function init(supabaseClient, profile) {
+  async function init(supabaseClient, profile, opts = {}) {
     db = supabaseClient; me = profile;
-    const [w, q, c, cw, ws, sk, strat, deckJson, teachR] = await Promise.all([
+    const [w, q, c, cw, ws, sk, strat, deckJson, teachR, fl] = await Promise.all([
       db.from('wc_words').select('*').eq('study', true),
       db.from('wc_questions').select('*'),
       db.from('wc_clusters').select('*'),
       db.from('wc_cluster_words').select('*'),
       db.from('wc_word_state').select('*').eq('user_id', me.id),
       db.from('wc_skill_state').select('*').eq('user_id', me.id),
-      fetch('strategy_content.json').then(r => r.json()).catch(() => null),
-      fetch('deck.json').then(r => r.json()).catch(() => null),
+      opts.strategy !== undefined ? Promise.resolve(opts.strategy) : fetch('strategy_content.json').then(r => r.json()).catch(() => null),
+      opts.deck !== undefined ? Promise.resolve(opts.deck) : fetch('deck.json').then(r => r.json()).catch(() => null),
       db.from('wc_teach_entries').select('word_id, created_at').eq('user_id', me.id),
+      opts.flags !== undefined ? Promise.resolve({ data: Object.entries(opts.flags).map(([name, enabled]) => ({ name, enabled })) }) : db.from('wc_flags').select('name, enabled'),
     ]);
     for (const r of [w, q, c, cw, ws, sk]) if (r.error) throw r.error;
     words = w.data; questions = q.data; clusters = c.data; strategy = strat;
+    flags = {}; for (const f of (fl?.data || [])) flags[f.name] = !!f.enabled;
+    if (fl?.error) reportError('wc_flags.select', fl.error);
     deck = deckJson && Array.isArray(deckJson.words) ? deckJson : null;
     deckSet = new Set((deck?.words || []).map(x => String(x).toLowerCase()));
     for (const t of (teachR?.data || [])) if (!teachAt.has(t.word_id) || teachAt.get(t.word_id) < t.created_at) teachAt.set(t.word_id, t.created_at);
@@ -104,15 +124,17 @@ const Engine = (() => {
       .slice(0, n);
   }
 
-  function dueReviews(n) {
+  // order 'oldest' = longest overdue first (legacy); 'box' = highest box first, so words nearest mastery get their next hit
+  function dueReviews(n, order = 'oldest') {
     const t = todayStr();
     return [...state.values()]
       .filter(s => (s.state === 'learning' || s.state === 'review') && s.due_on <= t)
-      .sort((a, b) => a.due_on.localeCompare(b.due_on))
+      .sort((a, b) => order === 'box' ? ((b.box || 0) - (a.box || 0)) || a.due_on.localeCompare(b.due_on) : a.due_on.localeCompare(b.due_on))
       .slice(0, n)
       .map(s => wordsById.get(s.word_id))
       .filter(Boolean);
   }
+  const dueCount = () => { const t = todayStr(); return [...state.values()].filter(s => (s.state === 'learning' || s.state === 'review') && s.due_on <= t).length; };
 
   // ---------- item builders ----------
   function flashcardItem(w, direction) {
@@ -201,13 +223,26 @@ const Engine = (() => {
   }
 
   // ---------- session assembly ----------
-  function buildSession() {
-    // while the coach's deck still has unstudied words, the session takes more new words (deck.newPerDay) and grows a little
+  // Which words go into today's cards. Two policies:
+  //  legacy:       6 oldest-due reviews + up to newPerDay new words (session grows a little while the deck has words left)
+  //  review-first: up to 14 due reviews, highest box first; new words only when fewer than 10 are due  (flag vocab_review_first)
+  const REVIEW_FIRST = { cardCap: 14, newWordsOnlyBelowDue: 10 };
+  function pickSessionWords() {
     const deckOn = deckRemaining() > 0;
+    if (flag('vocab_review_first')) {
+      const nDue = dueCount();
+      const reviews = dueReviews(REVIEW_FIRST.cardCap, 'box');
+      const perDay = deckOn ? (deck.newPerDay || T.newWordsMax) : T.newWordsMax;
+      const newMax = nDue < REVIEW_FIRST.newWordsOnlyBelowDue ? Math.max(0, Math.min(perDay, REVIEW_FIRST.cardCap - reviews.length)) : 0;
+      return { reviews, newWords: newMax ? newWordCandidates(newMax) : [], policy: 'review_first', nDue };
+    }
     const newMax = deckOn ? (deck.newPerDay || T.newWordsMax) : T.newWordsMax;
     const wordBudget = T.wordItemsPerSession + (deckOn ? Math.max(0, newMax - T.newWordsMax + 2) : 0);
     const reviews = dueReviews(T.wordItemsPerSession - 4);
-    const newWords = newWordCandidates(Math.min(newMax, wordBudget - reviews.length));
+    return { reviews, newWords: newWordCandidates(Math.min(newMax, wordBudget - reviews.length)), policy: 'legacy', nDue: dueCount() };
+  }
+  function buildSession() {
+    const { reviews, newWords } = pickSessionWords();
     const wordItems = shuffle([...reviews, ...newWords]).map((w, i) =>
       flashcardItem(w, i % 2 === 0 ? 'word2def' : 'def2word'));
     const qItems = pickQuestions(T.questionItemsPerSession).map(questionItem);
@@ -266,7 +301,8 @@ const Engine = (() => {
     const remaining = await budgetRemaining();
     const pay = Math.max(0, Math.min(cents, remaining));
     if (pay > 0) {
-      await db.from('wc_ledger').insert({ user_id: me.id, cents: pay, kind: 'provisional', word_id: w.id, note: w.word });
+      const { error } = await db.from('wc_ledger').insert({ user_id: me.id, cents: pay, kind: 'provisional', word_id: w.id, note: w.word });
+      if (error) { reportError('wc_ledger.insert', error, { word_id: w.id, pay }); return 0; }
     }
     return pay;
   }
@@ -284,7 +320,7 @@ const Engine = (() => {
     const merged = { ...existing, ...patch, updated_at: new Date().toISOString() };
     state.set(patch.word_id, merged);
     const { error } = await db.from('wc_word_state').upsert(merged);
-    if (error) throw error;
+    if (error) { reportError('wc_word_state.upsert', error, { word_id: patch.word_id }); throw error; }
     return merged;
   }
 
@@ -295,7 +331,15 @@ const Engine = (() => {
     s.attempts += 1;
     s.scaffold = scaffoldLevel(skill);
     skills.set(skill, s);
-    await db.from('wc_skill_state').upsert(s);
+    const { error } = await db.from('wc_skill_state').upsert(s);
+    if (error) reportError('wc_skill_state.upsert', error, { skill });
+  }
+
+  // what the learner was shown, so a wrong pick is interpretable later (flashcard distractors are random per exposure)
+  function optionsShown(item) {
+    if (item.kind === 'flashcard') return { direction: item.direction, word_ids: (item.options || []).map(o => o.id) };
+    if (item.choices) return { letters: item.choices.map(c => c.letter) };
+    return null;
   }
 
   /** Process one answered item. Returns { counted, rushed, correct, masteredNow, paidCents, alreadyKnown } */
@@ -305,11 +349,13 @@ const Engine = (() => {
     const counted = !rushed;
     const w = item.word || (kind === 'synonyms' ? wordsByWord.get(item.q.stem.replace(':', '').trim().toLowerCase()) : null);
 
-    await db.from('wc_answers').insert({
-      user_id: me.id, session_id: sessionRow.id, kind: kind === 'synonyms' ? 'synonym' : kind,
+    const ins = await db.from('wc_answers').insert({
+      user_id: me.id, session_id: sessionRow.id, kind: ANSWER_KIND[kind] || kind,
       word_id: w?.id ?? null, question_id: item.q?.id ?? null,
       correct, chosen: chosen ?? null, latency_ms: latencyMs, counted, rushed, error_tag: errorTag ?? null,
+      scaffold_level: item.q ? (item.scaffold ?? null) : null, options_shown: optionsShown(item), local_day: todayStr(),
     });
+    if (ins.error) reportError('wc_answers.insert', ins.error, { kind, session_id: sessionRow.id });
     if (item.q) rememberQuestion(item.q.id);
     if (['synonyms', 'sentence_completion', 'analogies'].includes(kind) && counted) await bumpSkill(kind, correct);
 
@@ -354,12 +400,13 @@ const Engine = (() => {
 
   async function logDiagnosticAnswer(sessionRow, item, { correct, latencyMs, chosen }) {
     // audit trail for diagnostics — same answers table as drills
-    const kindMap = { flashcard: 'flashcard', synonyms: 'synonym', sentence_completion: 'sentence_completion', analogies: 'analogy' };
-    await db.from('wc_answers').insert({
-      user_id: me.id, session_id: sessionRow.id, kind: kindMap[item.kind] || 'flashcard',
+    const { error } = await db.from('wc_answers').insert({
+      user_id: me.id, session_id: sessionRow.id, kind: ANSWER_KIND[item.kind] || 'flashcard',
       word_id: item.word?.id ?? null, question_id: item.q?.id ?? null,
       correct, chosen: chosen ?? null, latency_ms: latencyMs, counted: true, rushed: false,
+      scaffold_level: item.q ? 0 : null, options_shown: optionsShown(item), local_day: todayStr(),
     });
+    if (error) reportError('wc_answers.insert(diagnostic)', error, { kind: item.kind });
   }
 
   async function seedDiagnosticResult(item, correct, latencyMs) {
@@ -376,15 +423,15 @@ const Engine = (() => {
 
   // ---------- session lifecycle ----------
   async function openSession(kind) {
-    const day = todayStr();
-    const { data: rows, error: qerr } = await db.from('wc_sessions').select('*').eq('user_id', me.id).eq('day', day).order('id');
+    const day = todayStr();   // local calendar day; local_day is the column readers use, day is kept for continuity
+    const { data: rows, error: qerr } = await db.from('wc_sessions').select('*').eq('user_id', me.id).eq('local_day', day).order('id');
     if (qerr) throw qerr;
     // resume only an incomplete session of the SAME kind
     const open = (rows || []).find(s => !s.completed && s.kind === kind);
     if (open) return { row: open, paying: open.is_primary };
     const hasPrimary = (rows || []).some(s => s.is_primary);
     const isPrimary = !hasPrimary;
-    const { data, error } = await db.from('wc_sessions').insert({ user_id: me.id, day, is_primary: isPrimary, kind }).select().single();
+    const { data, error } = await db.from('wc_sessions').insert({ user_id: me.id, day, local_day: day, tz: tzName(), is_primary: isPrimary, kind }).select().single();
     if (error) throw error;
     return { row: data, paying: isPrimary };
   }
@@ -392,12 +439,20 @@ const Engine = (() => {
   async function closeSession(row, { xp, focus, durationS }) {
     const { error } = await db.from('wc_sessions').update({ xp, focus, duration_s: durationS, completed: true }).eq('id', row.id);
     if (error) throw error;
+    // evidence: one activity row per completed session (kind by session kind)
+    const kindId = row.kind === 'checkpoint' ? 'probe' : 'vocab_session';
+    const startedAt = row.created_at || new Date(Date.now() - durationS * 1000).toISOString();
+    const act = await db.from('wc_activity_log').insert({
+      user_id: me.id, kind_id: kindId, started_at: startedAt, ended_at: new Date().toISOString(), minutes: Math.max(1, Math.round(durationS / 60)),
+      session_id: row.id, outcome: { xp, focus, session_kind: row.kind }, reported_by: 'app', created_by: me.id,
+    });
+    if (act.error) reportError('wc_activity_log.insert(session)', act.error, { session_id: row.id });
   }
 
   async function streak() {
-    const { data, error } = await db.from('wc_sessions').select('day, focus').eq('user_id', me.id).eq('completed', true).eq('is_primary', true).order('day', { ascending: false }).limit(120);
+    const { data, error } = await db.from('wc_sessions').select('local_day, focus').eq('user_id', me.id).eq('completed', true).eq('is_primary', true).order('local_day', { ascending: false }).limit(120);
     if (error) return 0;
-    const days = data.filter(s => (s.focus ?? 1) >= 0.5).map(s => s.day);
+    const days = data.filter(s => (s.focus ?? 1) >= 0.5).map(s => s.local_day).filter(Boolean);
     const set = new Set(days);
     let n = 0, d = todayStr();
     if (!set.has(d)) d = addDays(d, -1);
@@ -454,10 +509,13 @@ const Engine = (() => {
   return {
     T, init, needsDiagnostic, buildSession, buildDiagnostic, openSession, closeSession,
     processAnswer, seedDiagnosticResult, logDiagnosticAnswer, streak, wordCounts, moneySummary, payoutPreview,
+    flag, reportError, ANSWER_KIND,
     get me() { return me; }, get words() { return words; }, get state() { return state; },
     get skills() { return skills; }, get strategy() { return strategy; },
     get deck() { return deck; }, deckRemaining, productionWords,
     clusterFor: id => (clusterOf.get(id) || [])[0] || null,
     wordsById: () => wordsById,
+    // exposed for tests
+    _dates: { todayStr, addDays, dayOf, tzName }, _pickSessionWords: pickSessionWords, _dueReviews: dueReviews, _optionsShown: optionsShown,
   };
 })();

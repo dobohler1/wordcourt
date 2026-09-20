@@ -1,9 +1,9 @@
 /* WordCourt drills — original practice sets, auto-graded. Content only; UI in drills.js.
-   Item types: numeric (typed answer), mc (A–E), completion (ISEE sentence completion), analogy (bridge first),
-   reading (passage-linked), checklist (platform review, self-marked), card (read-only). */
+   Item types: numeric (typed answer), mc (A–E), qc (two-column comparison), completion (ISEE sentence completion),
+   analogy (bridge first), reading (passage-linked), card (read-only). */
 window.WORDCOURT_DRILLS = {
   skills: {
-    "pace-cap": "Pacing: over the per-question cap", "qc-pinned": "QC: both columns pinned \u2192 D impossible", "qc-fraction-case": "QC: test a fraction between 0 and 1", "triangle-inequality": "Triangle inequality (third-side range)", "worst-case": "Worst-case counting (guarantee)", "endpoint-check": "Bounded domain: check both endpoints", "stats-mean-grouped": "Mean from a frequency table", "rate-multiplier": "Rates multiply (not add)", "counting-repeat": "Counting with repeats allowed", "qc-labels": "QC: labels make it computable", "qc-cannot-determine": "QC: cannot be determined (D)", "expected-value": "Expected value", "abs-inequality": "Absolute-value inequalities", "factoring": "Factoring a common binomial", "proportion": "Proportions / similar triangles", "perimeter-not-area": "Perimeter never fixes area", "rd-frame": "Reading: the sentence that frames cited lines", "rd-organization": "Reading: organization of the passage",
+    "qc-pinned": "QC: both columns pinned \u2192 D impossible", "qc-fraction-case": "QC: test a fraction between 0 and 1", "triangle-inequality": "Triangle inequality (third-side range)", "worst-case": "Worst-case counting (guarantee)", "endpoint-check": "Bounded domain: check both endpoints", "stats-mean-grouped": "Mean from a frequency table", "rate-multiplier": "Rates multiply (not add)", "counting-repeat": "Counting with repeats allowed", "qc-labels": "QC: labels make it computable", "qc-cannot-determine": "QC: cannot be determined (D)", "expected-value": "Expected value", "abs-inequality": "Absolute-value inequalities", "factoring": "Factoring a common binomial", "proportion": "Proportions / similar triangles", "perimeter-not-area": "Perimeter never fixes area", "rd-frame": "Reading: the sentence that frames cited lines", "rd-organization": "Reading: organization of the passage",
     'scale-area': 'Scaling: area × k²', 'scale-volume': 'Scaling: volume × k³', 'lcm-product': 'LCM vs. least product',
     'stats-median-grouped': 'Median from table / histogram', 'stats-weighted-mean': 'Weighted mean', 'stats-mean-median-effect': 'Changes to mean vs. median',
     'stats-mean': 'Mean', 'answer-asked': 'Answer the question asked', 'chart-read': 'Reading a chart', 'percent-chain': 'Percent change chains',
@@ -21,7 +21,7 @@ window.WORDCOURT_DRILLS = {
     'rd-main-idea': 'Reading: main idea (not too narrow)', 'rd-detail': 'Reading: detail (re-find the line)', 'rd-relationship': 'Reading: reversed relationship',
     'rd-tone': 'Reading: tone / attitude', 'rd-inference': 'Reading: inference (not anti-thesis)', 'rd-century': 'Reading: century / date arithmetic',
     'rd-vocab': 'Reading: vocabulary in context', 'rd-purpose': 'Reading: paragraph purpose', 'rd-sequence': 'Reading: sequence of events',
-    'percent-of': 'Percent of a number / finding the whole', 'rd-pacing': 'Reading: pacing (reached in time)', 'vocab-completion': 'Sentence completions', 'analogy-bridge': 'Analogy bridges', 'timed': 'Timed section pacing',
+    'percent-of': 'Percent of a number / finding the whole', 'vocab-completion': 'Sentence completions', 'analogy-bridge': 'Analogy bridges',
     'vocab-synonym': 'Synonyms (most nearly means)', 'vocab-intensity': 'Synonyms: nearest choice, not exact (intensity)',
   },
 

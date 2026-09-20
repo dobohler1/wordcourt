@@ -246,3 +246,12 @@ main.wide { max-width: 52rem; }
 .money-rules h3, .money-h { margin: 0 0 .4rem; font-size: .78rem; text-transform: uppercase; letter-spacing: .1em; color: var(--accent); }
 .money-h { margin-top: 1.4rem; }
 .money-rules ul { margin: 0; padding-left: 1.1rem; } .money-rules li { margin: .35rem 0; }
+
+/* ---------- Phase 1: coach activity form + system panel ---------- */
+.act-form { display: flex; flex-wrap: wrap; gap: .4rem .5rem; align-items: center; margin: .5rem 0; }
+.act-form input[type="text"], .act-form input[type="number"], .act-form input[type="date"], .act-form select { font: inherit; padding: .3rem .45rem; border: 1px solid var(--rule, #ccc); border-radius: 6px; background: var(--card, #fff); color: inherit; }
+.act-form input[type="text"] { min-width: 12rem; flex: 1 1 12rem; }
+.act-form input[type="number"] { width: 6rem; }
+.act-check { font-size: .9rem; display: inline-flex; gap: .3rem; align-items: center; }
+.sys-panel .flag-row { display: flex; gap: .5rem; align-items: baseline; margin: .25rem 0; font-size: .92rem; }
+.sys-panel p.no { color: var(--bad, #b3372b); }

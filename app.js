@@ -66,7 +66,7 @@
   }
 
   // ---------- money widgets (shared by Today, wrap-up, Money) ----------
-  const fmtDue = d => { if (!d) return ''; const t = new Date().toISOString().slice(0, 10); return d <= t ? 'today' : new Date(d + 'T12:00:00').toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }); };
+  const fmtDue = d => { if (!d) return ''; const t = Engine._dates.todayStr(); return d <= t ? 'today' : new Date(d + 'T12:00:00').toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }); };
   const nextMilestone = (earned, ms) => ms.find(m => m > earned) ?? null;
   function milestoneBar(earned, pv) {
     const goal = nextMilestone(earned, pv.milestones) ?? pv.milestones[pv.milestones.length - 1];
@@ -341,7 +341,11 @@
       if (!okLen || !usesWord) { msg.textContent = 'Use the word, and give me a real sentence (5+ words).'; return; }
       if (parrot) { msg.textContent = 'That\'s my definition 🙂 — say it your way.'; return; }
       go.disabled = true;
-      await sb.from('wc_teach_entries').insert({ user_id: profile.id, word_id: w.id, sentence: s, passed: true });
+      const te = await sb.from('wc_teach_entries').insert({ user_id: profile.id, word_id: w.id, sentence: s, passed: true });
+      if (te.error) Engine.reportError('wc_teach_entries.insert', te.error, { word_id: w.id });
+      // dual write (Phase 1): the sentence is also a reflection of kind 'production'
+      const rf = await sb.from('wc_reflections').insert({ user_id: profile.id, kind: 'production', word_id: w.id, text: s });
+      if (rf.error) Engine.reportError('wc_reflections.insert(production)', rf.error, { word_id: w.id });
       await Engine.processAnswer(session.row, { kind: 'teach', word: w }, { correct: true, latencyMs: Date.now() - itemShownAt });
       session.xp += Engine.T.xpPerItem.teach; session.engaged++; session.answered++;
       const fb = el('div', 'feedback good', '📓 Saved to your notebook — this sentence is what you\'ll see at review time.');

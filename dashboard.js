@@ -7,7 +7,6 @@ const Dashboard = (() => {
   const pad = n => String(n).padStart(2, '0');
   const dayOf = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
   const todayStr = () => dayOf(new Date());
-  const utcToday = () => new Date().toISOString().slice(0, 10);
   const addDays = (day, n) => { const x = new Date(day + 'T12:00:00'); x.setDate(x.getDate() + n); return dayOf(x); };
   const fmtDay = day => new Date(day + 'T12:00:00').toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
   const fmtDate = iso => new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
@@ -17,7 +16,7 @@ const Dashboard = (() => {
   const setById = id => D.sets.find(s => s.id === id);
   const skillLabel = k => k.startsWith('w:') ? `word: ${k.slice(2)}` : (D.skills[k] || k);
 
-  // which Core Concepts lesson covers a skill (1–3 built, 4–7 planned)
+  // which Core Concepts lesson covers a skill (Lessons 1, 2, 3 and 7 are built; 4–6 are not yet written)
   const LESSON = [
     [/^(reverse-percent|percent-chain|percent-of|percent)/, 1, 'Percent'],
     [/^prob-/, 2, 'Probability'],
@@ -51,13 +50,14 @@ const Dashboard = (() => {
       host.append(card);
       try { await studentCard(card, s, today); } catch (e) { card.append(el('p', 'flag', esc(e.message))); }
     }
+    try { await systemPanel(host, today); } catch (e) { host.append(el('div', 'card', `<p class="flag">System panel: ${esc(e.message)}</p>`)); }
   }
 
   async function studentCard(card, s, today) {
     const since = addDays(today, -21);
     const [runs, att, sessR, wsR, teachR, m] = await Promise.all([
       Drills._loadRuns(s.id), Drills._loadAttempts(s.id),
-      sb.from('wc_sessions').select('day, xp, focus, kind, completed, duration_s').eq('user_id', s.id).gte('day', since).order('day', { ascending: false }),
+      sb.from('wc_sessions').select('day, local_day, xp, focus, kind, completed, duration_s').eq('user_id', s.id).gte('local_day', since).order('local_day', { ascending: false }),
       sb.from('wc_word_state').select('word_id, state, box, due_on, misses, correct_streak').eq('user_id', s.id),
       sb.from('wc_teach_entries').select('sentence, created_at').eq('user_id', s.id).order('created_at', { ascending: false }).limit(3),
       Engine.moneySummary(s.id).catch(() => null),
@@ -67,7 +67,7 @@ const Dashboard = (() => {
     const localDay = iso => dayOf(new Date(iso));
 
     // ----- today strip -----
-    const vocabToday = sess.find(x => x.completed && (x.day === today || x.day === utcToday()));
+    const vocabToday = sess.find(x => x.completed && x.local_day === today);
     const runsToday = finished.filter(r => localDay(r.started_at) === today);
     const scoredToday = runsToday.filter(r => setById(r.set_id)?.type !== 'card');
     const pendingLogs = finished.filter(r => r.n_wrong > 0 && !r.logs_complete);
@@ -156,14 +156,14 @@ const Dashboard = (() => {
     const grid = el('div', 'grid14');
     for (let i = 13; i >= 0; i--) {
       const d = addDays(today, -i);
-      const x = sess.find(q => q.day === d && q.completed);
+      const x = sess.find(q => q.local_day === d && q.completed);
       const cell = el('div', 'gcell ' + (x ? (x.focus != null && x.focus < 0.7 ? 'rush' : 'on') : 'off'));
       cell.title = `${fmtDay(d)}${x ? ` · ${x.kind} · ${x.xp ?? 0} xp${x.focus != null ? ` · focus ${Math.round(x.focus * 100)}%` : ''}` : ' · no session'}`;
       cell.textContent = new Date(d + 'T12:00:00').getDate();
       grid.append(cell);
     }
     card.append(grid);
-    const streak = (() => { let n = 0; for (let i = 0; i < 60; i++) { const d = addDays(today, -i); if (sess.some(q => q.day === d && q.completed)) n++; else if (i > 0) break; } return n; })();
+    const streak = (() => { let n = 0; for (let i = 0; i < 60; i++) { const d = addDays(today, -i); if (sess.some(q => q.local_day === d && q.completed)) n++; else if (i > 0) break; } return n; })();
     const counts = {}; for (const w of ws) counts[w.state] = (counts[w.state] || 0) + 1;
     const rushed = sess.filter(x => x.completed && x.focus != null && x.focus < 0.7).length;
     card.append(el('p', 'small', `Streak <b>${streak}</b> day${streak === 1 ? '' : 's'} · ${counts.learning || 0} learning · ${counts.review || 0} review · ${(counts.mastered || 0) + (counts.known || 0)} mastered${m ? ` · ${money(m.vested)} owed, ${money(m.provisional)} pending` : ''}${rushed ? ` · <span class="no">${rushed} rushed session${rushed > 1 ? 's' : ''}</span>` : ''}`));
@@ -195,10 +195,99 @@ const Dashboard = (() => {
     }
     det.append(tbl);
     const st = el('table', 'tbl', '<tr><th>day</th><th>kind</th><th>xp</th><th>focus</th><th>time</th></tr>');
-    for (const x of sess.slice(0, 14)) st.insertAdjacentHTML('beforeend', `<tr><td>${x.day}</td><td>${x.kind}${x.completed ? '' : ' (open)'}</td><td>${x.xp ?? '—'}</td><td>${x.focus != null ? Math.round(x.focus * 100) + '%' : '—'}</td><td>${x.duration_s != null ? fmtClock(x.duration_s) : '—'}</td></tr>`);
+    for (const x of sess.slice(0, 14)) st.insertAdjacentHTML('beforeend', `<tr><td>${x.local_day || x.day}</td><td>${x.kind}${x.completed ? '' : ' (open)'}</td><td>${x.xp ?? '—'}</td><td>${x.focus != null ? Math.round(x.focus * 100) + '%' : '—'}</td><td>${x.duration_s != null ? fmtClock(x.duration_s) : '—'}</td></tr>`);
     det.append(st);
     if (teachR.data?.length) { const tl = el('ul', 'miss-list'); for (const t of teachR.data) tl.append(el('li', null, `“${esc(t.sentence)}”`)); det.append(el('p', 'small dim', 'Notebook sentences'), tl); }
     card.append(det);
+
+    // ----- activity log (coach-entered work that happens outside the app) -----
+    await activitySection(card, s, today);
+  }
+
+  // Lessons, paper practice sets, platform corrections and tests leave no row unless the coach logs them here.
+  let kindsCache = null;
+  async function interventionKinds() {
+    if (kindsCache) return kindsCache;
+    const { data, error } = await sb.from('wc_intervention_kinds').select('id, label, coach_required').order('label');
+    if (error) throw error;
+    kindsCache = data || []; return kindsCache;
+  }
+  async function activitySection(card, s, today) {
+    const kinds = await interventionKinds();
+    const { data: recent } = await sb.from('wc_activity_log').select('id, kind_id, started_at, minutes, targets, outcome, note, reported_by').eq('user_id', s.id).neq('reported_by', 'app').order('started_at', { ascending: false }).limit(5);
+    const det = el('details', 'dash-details'); det.append(el('summary', null, 'Log an activity (lesson, paper set, platform correction, test)'));
+    const form = el('div', 'act-form');
+    const sel = el('select'); for (const k of kinds) { const o = el('option', null, esc(k.label)); o.value = k.id; if (k.id === 'lesson') o.selected = true; sel.append(o); }
+    const date = el('input'); date.type = 'date'; date.value = today;
+    const mins = el('input'); mins.type = 'number'; mins.min = 1; mins.placeholder = 'minutes';
+    const targets = el('input'); targets.type = 'text'; targets.placeholder = 'skills or lesson (comma-separated, e.g. prob-mult, lesson 2)';
+    const score = el('input'); score.type = 'text'; score.placeholder = 'score e.g. 9/12 (optional)';
+    const note = el('input'); note.type = 'text'; note.placeholder = 'note (optional)';
+    const coach = el('label', 'act-check', '<input type="checkbox" checked> coach present');
+    const save = el('button', 'btn primary small-btn', 'Save');
+    const msg = el('span', 'form-msg', '');
+    save.addEventListener('click', async () => {
+      const m = Number(mins.value); if (!m) { msg.textContent = 'minutes?'; return; }
+      const sc = score.value.match(/^\s*(\d+)\s*\/\s*(\d+)\s*$/);
+      const startedAt = new Date(date.value + 'T12:00:00').toISOString();
+      save.disabled = true;
+      const { error } = await sb.from('wc_activity_log').insert({
+        user_id: s.id, kind_id: sel.value, started_at: startedAt, ended_at: new Date(new Date(startedAt).getTime() + m * 60000).toISOString(), minutes: m,
+        currency: coach.querySelector('input').checked ? 'block' : 'scrap', coach_present: coach.querySelector('input').checked,
+        targets: targets.value.split(',').map(x => x.trim()).filter(Boolean), outcome: sc ? { score: Number(sc[1]), of: Number(sc[2]) } : null,
+        note: note.value.trim() || null, reported_by: 'coach', created_by: profile.id,
+      });
+      save.disabled = false;
+      if (error) { msg.textContent = error.message; return; }
+      msg.textContent = 'saved'; mins.value = ''; targets.value = ''; score.value = ''; note.value = '';
+    });
+    form.append(sel, date, mins, targets, score, note, coach, save, msg);
+    det.append(form);
+    if (recent?.length) {
+      const ul = el('ul', 'miss-list');
+      for (const a of recent) ul.append(el('li', null, `${esc(fmtDate(a.started_at))} · <b>${esc(kinds.find(k => k.id === a.kind_id)?.label || a.kind_id)}</b> · ${a.minutes ?? '?'} min${a.targets?.length ? ' · ' + esc(a.targets.join(', ')) : ''}${a.outcome?.score != null ? ` · ${a.outcome.score}/${a.outcome.of}` : ''}${a.note ? ` — ${esc(a.note)}` : ''}`));
+      det.append(ul);
+    }
+    card.append(det);
+  }
+
+  // ----- system panel: is the evidence being captured? -----
+  async function systemPanel(host, today) {
+    const since = new Date(Date.now() - 7 * 864e5).toISOString();
+    const [flagsR, errR, attR, ansR, runsR, verR] = await Promise.all([
+      sb.from('wc_flags').select('name, enabled, description').order('name'),
+      sb.from('wc_client_errors').select('site, message, created_at').gte('created_at', since).order('created_at', { ascending: false }).limit(20),
+      sb.from('wc_drill_attempts').select('run_id, created_at').gte('created_at', since),
+      sb.from('wc_answers').select('created_at').gte('created_at', since),
+      sb.from('wc_drill_runs').select('id, n_items, finished_at, is_junk, set_version_id, started_at').not('finished_at', 'is', null),
+      sb.from('wc_set_versions').select('id', { count: 'exact', head: true }),
+    ]);
+    const card = el('div', 'card sys-panel');
+    card.append(el('h2', null, 'System'));
+    const built = window.WORDCOURT_CONTENT_VERSIONS?.built;
+    const runs = (runsR.data || []).filter(r => !r.is_junk);
+    const attByRun = new Map(); for (const a of (attR.data || [])) attByRun.set(a.run_id, (attByRun.get(a.run_id) || 0) + 1);
+    const mismatched = runs.filter(r => new Date(r.started_at) >= new Date(since) && r.n_items > 0 && attByRun.get(r.id) !== r.n_items);
+    const unversioned = runs.filter(r => !r.set_version_id).length;
+    const byDay = new Map();
+    for (const a of (attR.data || [])) { const d = dayOf(new Date(a.created_at)); byDay.set(d, (byDay.get(d) || 0) + 1); }
+    for (const a of (ansR.data || [])) { const d = dayOf(new Date(a.created_at)); byDay.set(d, (byDay.get(d) || 0) + 1); }
+    const days = []; for (let i = 6; i >= 0; i--) { const d = addDays(today, -i); days.push(`${d.slice(5)}: ${byDay.get(d) || 0}`); }
+    card.append(el('p', 'small', `Content build: <b>${esc(built ? fmtDate(built) + ' ' + new Date(built).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'unknown')}</b> · registry: <b>${verR.count ?? '?'}</b> set versions · runs without a version: <b>${unversioned}</b>`));
+    card.append(el('p', 'small', `Evidence rows per day (attempts + answers): ${esc(days.join(' · '))}`));
+    card.append(el('p', 'small' + (mismatched.length ? ' no' : ''), `Runs this week whose attempts ≠ items: <b>${mismatched.length}</b>`));
+    const errs = errR.data || [];
+    card.append(el('p', 'small' + (errs.length ? ' no' : ''), `Client errors, last 7 days: <b>${errs.length}</b>`));
+    if (errs.length) { const ul = el('ul', 'miss-list'); for (const e of errs.slice(0, 8)) ul.append(el('li', null, `${esc(fmtDate(e.created_at))} · <span class="w">${esc(e.site)}</span> — ${esc(e.message)}`)); card.append(ul); }
+    card.append(el('h3', 'dash-h', 'Flags'));
+    for (const f of (flagsR.data || [])) {
+      const row = el('label', 'flag-row');
+      const cb = el('input'); cb.type = 'checkbox'; cb.checked = !!f.enabled;
+      cb.addEventListener('change', async () => { const { error } = await sb.from('wc_flags').update({ enabled: cb.checked, updated_by: profile.id, updated_at: new Date().toISOString() }).eq('name', f.name); if (error) { alert(error.message); cb.checked = !cb.checked; } });
+      row.append(cb, el('span', null, `<code>${esc(f.name)}</code> <span class="dim">${esc(f.description || '')}</span>`));
+      card.append(row);
+    }
+    host.append(card);
   }
 
   function trendSvg(runs) {

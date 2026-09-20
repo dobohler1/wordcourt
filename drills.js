@@ -27,6 +27,65 @@ const Drills = (() => {
     } catch {}
   }
 
+  const tzName = () => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || null; } catch { return null; } };
+  const report = (site, e, detail) => { try { Engine.reportError(site, e, detail); } catch { console.warn(site, e); } };
+
+  // ---------- content registry: name the exact content a run showed ----------
+  // canonical JSON (sorted keys, no whitespace) + SHA-256, byte-identical to analyst/build_content.mjs
+  const canon = v => {
+    if (v === null || typeof v !== 'object') return JSON.stringify(v === undefined ? null : v);
+    if (Array.isArray(v)) return '[' + v.map(canon).join(',') + ']';
+    const keys = Object.keys(v).filter(k => v[k] !== undefined).sort();
+    return '{' + keys.map(k => JSON.stringify(k) + ':' + canon(v[k])).join(',') + '}';
+  };
+  async function sha256(s) {
+    try { const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s)); return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join(''); }
+    catch { return null; }
+  }
+  async function setHash(set) {
+    const { items, _remote, ...rest } = set;
+    const ih = [];
+    for (const it of (items || [])) { const h = await sha256(canon(it)); if (!h) return null; ih.push(h); }
+    return sha256(canon({ set: rest, items: ih }));
+  }
+  // set version id + item version ids for the content in hand; nulls when the registry has not been synced yet
+  async function registryFor(set) {
+    const out = { hash: null, setVersionId: null, itemVersionIds: new Map() };
+    try {
+      out.hash = await setHash(set);
+      let row = null;
+      if (out.hash) { const r = await sb.from('wc_set_versions').select('id').eq('set_id', set.id).eq('content_hash', out.hash).maybeSingle(); if (r.error) throw r.error; row = r.data; }
+      if (!row && set._remote) { const r = await sb.from('wc_set_versions').select('id').eq('set_id', set.id).eq('source', 'remote').order('valid_from', { ascending: false }).limit(1).maybeSingle(); if (r.error) throw r.error; row = r.data; }
+      if (row) {
+        out.setVersionId = row.id;
+        const r = await sb.from('wc_set_version_items').select('item_version_id, wc_item_versions(item_id)').eq('set_version_id', row.id);
+        if (r.error) throw r.error;
+        for (const x of (r.data || [])) if (x.wc_item_versions?.item_id) out.itemVersionIds.set(x.wc_item_versions.item_id, x.item_version_id);
+      }
+    } catch (e) { report('registry.lookup', e, { set_id: set.id }); }
+    return out;
+  }
+  // conditions of observation, frozen on the run row so later edits to the set cannot rewrite history
+  const BLANK_RULE = { isee: 'never_blank', ssat: 'quarter_penalty' };
+  function purposeOf(set) {
+    if (set.type === 'card') return 'card';
+    if (/^lesson\d+_/.test(set.id)) return 'check';
+    if (set.paceCapS) return 'pacing';
+    if (/correction/.test(set.id)) return 'correction';
+    return 'practice';
+  }
+  function conditionsOf(set, items) {
+    return {
+      timed: !!set.timeLimitS, time_limit_s: set.timeLimitS ?? null,
+      cap_s: set.paceCapS ?? null, first_cap_s: set.paceCapS ? (set.paceFirstCapS || set.paceCapS * 3) : null,
+      scoring: set.scoring || 'none', blank_rule: BLANK_RULE[set.scoring] ?? null,
+      gated: !!(set.passages && !set.noGate), recall_prompt: !!set.recallPrompt,
+      reference_before_run: (set.intro || []).some(b => b.type === 'reference' || b.type === 'example'),
+      dynamic: !!set.dynamicFrom, remote: !!set._remote, n_items: (items || []).length,
+    };
+  }
+  const ACTIVITY_KIND = { card: 'card', check: 'mastery_check', pacing: 'pacing_set', correction: 'correction', practice: 'drill' };
+
   let remote = null;   // rows already merged from wc_drill_sets (null = not loaded yet)
   function init(client, prof) { sb = client; profile = prof; remote = null; }
   const isCoach = () => profile?.role === 'coach';
@@ -45,6 +104,7 @@ const Drills = (() => {
       if (error) throw error;
       for (const row of data || []) {
         const set = { ...row.set, id: row.set_id };
+        Object.defineProperty(set, '_remote', { value: true, enumerable: false });   // not part of the hashed content
         if (set.skills) Object.assign(D.skills, set.skills);
         const i = D.sets.findIndex(s => s.id === set.id);
         if (i >= 0) D.sets[i] = set; else D.sets.push(set);
@@ -79,7 +139,6 @@ const Drills = (() => {
   function grade(item, chosen) {
     if (chosen == null || chosen === '') return null;
     if (item.type === 'numeric') return gradeNumeric(item, chosen);
-    if (item.type === 'checklist') return chosen === 'ok';
     return chosen === item.answer;
   }
 
@@ -87,8 +146,8 @@ const Drills = (() => {
   async function loadRuns(userId) {
     const { data, error } = await sb.from('wc_drill_runs').select('*').eq('user_id', userId).order('started_at', { ascending: false });
     if (error) throw error;
-    // ignore runs a stray timer force-submitted instantly (0 s, every item unanswered)
-    return (data || []).filter(r => !(r.finished_at && r.n_items > 0 && r.duration_s <= 1 && r.n_blank === r.n_items));
+    // runs a stray timer force-submitted instantly (Sept 1 bug) are flagged is_junk in the database, never deleted
+    return (data || []).filter(r => !r.is_junk);
   }
   async function loadAttempts(userId, runId) {
     let q = sb.from('wc_drill_attempts').select('*').eq('user_id', userId).order('created_at', { ascending: true });
@@ -169,7 +228,17 @@ const Drills = (() => {
       const ok = el('button', 'btn primary', 'Read it — mark done');
       ok.addEventListener('click', async () => {
         ok.disabled = true;
-        await sb.from('wc_drill_runs').insert({ user_id: profile.id, set_id: set.id, scoring: 'none', finished_at: new Date().toISOString(), n_items: 0, logs_complete: true });
+        const reg = await registryFor(set);
+        const now = new Date().toISOString();
+        const ins = await sb.from('wc_drill_runs').insert({
+          user_id: profile.id, set_id: set.id, scoring: 'none', finished_at: now, n_items: 0, logs_complete: true,
+          purpose: 'card', conditions: conditionsOf(set, []), tz: tzName(), local_day: todayStr(), set_version_id: reg.setVersionId, set_content_hash: reg.hash,
+        }).select().single();
+        if (ins.error) report('wc_drill_runs.insert(card)', ins.error, { set_id: set.id });
+        else {
+          const act = await sb.from('wc_activity_log').insert({ user_id: profile.id, kind_id: 'card', started_at: now, ended_at: now, minutes: 1, targets: [], run_id: ins.data.id, outcome: { read: true }, reported_by: 'app', created_by: profile.id });
+          if (act.error) report('wc_activity_log.insert(card)', act.error, { set_id: set.id });
+        }
         renderList(host);
       });
       const back = el('button', 'btn ghost', 'Back'); back.addEventListener('click', () => renderList(host));
@@ -195,10 +264,16 @@ const Drills = (() => {
   }
 
   async function beginRun(host, set, items) {
-    const { data, error } = await sb.from('wc_drill_runs').insert({ user_id: profile.id, set_id: set.id, scoring: set.scoring || 'none', n_items: items.length }).select().single();
-    if (error) { alert('Could not start: ' + error.message); return; }
+    const reg = await registryFor(set);
+    const { data, error } = await sb.from('wc_drill_runs').insert({
+      user_id: profile.id, set_id: set.id, scoring: set.scoring || 'none', n_items: items.length,
+      purpose: purposeOf(set), conditions: conditionsOf(set, items), tz: tzName(), local_day: todayStr(),
+      set_version_id: reg.setVersionId, set_content_hash: reg.hash,
+    }).select().single();
+    if (error) { report('wc_drill_runs.insert', error, { set_id: set.id }); alert('Could not start: ' + error.message); return; }
     active = { set, items, run: data, startedAt: Date.now(), answers: new Map(), notes: new Map(), timer: null, host,
-      lastAnswerAt: 0, passagesSeen: new Set(), paceToned: false, warned: false };
+      lastAnswerAt: 0, passagesSeen: new Set(), paceToned: false, warned: false,
+      proc: new Map(), events: [], registry: reg };   // proc: per-item process facts that survive a cleared answer
     if (set.paceCapS) tone(660, 0.15);   // unlocks audio for the later chimes
     $('#tabs').hidden = true;
     renderForm();
@@ -297,23 +372,39 @@ const Drills = (() => {
     window.scrollTo(0, 0);
   }
   const fmtClock = s => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
-  function record(item, chosen, extra) {
-    if (chosen == null || chosen === '') active.answers.delete(item.id);
-    else {
-      const prev = active.answers.get(item.id);
-      const at = Date.now() - active.startedAt;
-      let pacing = prev ? { dwell_ms: prev.dwell_ms, over_cap: prev.over_cap } : {};
-      if (!prev && active.set.paceCapS) {
-        // dwell = time since the previous answer; the first question of a passage also carries the reading time, so it gets the longer cap
-        const dwell = at - active.lastAnswerAt;
-        let cap = active.set.paceCapS;
-        if (item.passage && !active.passagesSeen.has(item.passage)) { active.passagesSeen.add(item.passage); cap = active.set.paceFirstCapS || cap * 3; }
-        pacing = { dwell_ms: dwell, over_cap: dwell > cap * 1000 };
+  // dwell = time since the previous item's first pick; the first question of a passage carries the reading time, so it gets the longer cap.
+  // Measured on every set (Phase 1); over_cap is only meaningful when the set has a cap.
+  function dwellOf({ at, lastAnswerAt, capS, firstCapS, firstOfPassage }) {
+    const dwell_ms = at - lastAnswerAt;
+    let cap = capS || null;
+    if (cap && firstOfPassage) cap = firstCapS || cap * 3;
+    return { dwell_ms, over_cap: cap ? dwell_ms > cap * 1000 : false };
+  }
+  function record(item, chosen, extra, opts = {}) {
+    const at = Date.now() - active.startedAt;
+    const prev = active.answers.get(item.id);
+    const proc = active.proc.get(item.id) || { first_answer_ms: null, dwell_ms: null, over_cap: false, n_changes: 0 };
+    if (chosen == null || chosen === '') {
+      if (prev) { active.answers.delete(item.id); if (!opts.typing) { proc.n_changes++; active.events.push({ item_id: item.id, at_ms: at, event: 'clear', value: null }); } }
+    } else {
+      if (!prev && proc.first_answer_ms == null) {
+        // first commitment on this item: dwell clock resets here (unchanged from the pacing-set behavior)
+        const firstOfPassage = !!(item.passage && !active.passagesSeen.has(item.passage));
+        if (firstOfPassage) active.passagesSeen.add(item.passage);
+        Object.assign(proc, dwellOf({ at, lastAnswerAt: active.lastAnswerAt, capS: active.set.paceCapS, firstCapS: active.set.paceFirstCapS, firstOfPassage }), { first_answer_ms: at });
         active.lastAnswerAt = at; active.paceToned = false;
         if (active.pace) { active.pace.classList.remove('over'); active.pace.textContent = 'this question 0:00'; }
+        if (!opts.typing) { proc.picked = true; active.events.push({ item_id: item.id, at_ms: at, event: 'pick', value: String(chosen) }); }
+      } else if (!opts.typing && (!proc.picked || !prev || prev.chosen !== chosen)) {
+        // n_changes counts changes of a standing answer plus clears; a first commit or a re-pick after a clear is a 'pick'
+        const isChange = proc.picked && !!prev;
+        if (isChange) proc.n_changes++;
+        proc.picked = true;
+        active.events.push({ item_id: item.id, at_ms: at, event: isChange ? 'change' : 'pick', value: String(chosen) });
       }
-      active.answers.set(item.id, { chosen, at, ...pacing, ...(extra || {}) });
+      active.answers.set(item.id, { chosen, at, ...(extra || {}) });
     }
+    active.proc.set(item.id, proc);
     active.prog.textContent = `${active.answers.size} / ${active.items.length}`;
   }
   function itemNode(item, n) {
@@ -322,14 +413,10 @@ const Drills = (() => {
     node.append(el('div', 'drill-q', `<span class="drill-n">${n}.</span> ${promptHtml(item)}`));
     if (item.type === 'numeric') {
       const inp = el('input'); inp.type = 'text'; inp.placeholder = 'your answer'; inp.className = 'drill-num';
-      inp.addEventListener('input', () => record(item, inp.value.trim()));
+      // keystrokes update the answer silently; a committed value (blur or Enter) is the event that counts
+      inp.addEventListener('input', () => record(item, inp.value.trim(), null, { typing: true }));
+      inp.addEventListener('change', () => record(item, inp.value.trim()));
       node.append(inp);
-    } else if (item.type === 'checklist') {
-      const row = el('div', 'drill-check');
-      const ok = el('button', 'btn small-btn', '✓ correct'), miss = el('button', 'btn small-btn', '✗ missed');
-      ok.addEventListener('click', () => { ok.classList.add('picked-ok'); miss.classList.remove('picked-miss'); record(item, 'ok'); });
-      miss.addEventListener('click', () => { miss.classList.add('picked-miss'); ok.classList.remove('picked-ok'); record(item, 'miss'); });
-      row.append(ok, miss); node.append(row);
     } else {
       const choices = el('div', 'choices');
       for (const [letter, text] of item.choices) {
@@ -363,25 +450,48 @@ const Drills = (() => {
     active.host.querySelectorAll('button').forEach(b => b.disabled = true);
     const { set, items, run, host } = active;
     const durationS = Math.round((Date.now() - active.startedAt) / 1000);
-    const results = items.map(item => {
+    const results = items.map((item, idx) => {
       const a = active.answers.get(item.id);
+      const p = active.proc.get(item.id) || {};
       const correct = a ? grade(item, a.chosen) : null;
       const note = item.passage ? (active.notes.get(item.passage) || null) : (set.recallPrompt ? (active.notes.get('_recall') || null) : (a?.note || null));
-      return { item, chosen: a?.chosen ?? null, correct, blank: correct == null, timed_out: !a && timedOut, latency_ms: a?.at ?? null, note,
-        dwell_ms: a?.dwell_ms ?? null, over_cap: !!a?.over_cap };
+      return { item, position: idx + 1, chosen: a?.chosen ?? null, correct, blank: correct == null, timed_out: !a && timedOut, latency_ms: a?.at ?? null, note,
+        dwell_ms: a ? (p.dwell_ms ?? null) : null, over_cap: !!(a && p.over_cap), first_answer_ms: a ? (p.first_answer_ms ?? null) : null, n_changes: p.n_changes || 0 };
     });
     const nCorrect = results.filter(r => r.correct === true).length, nWrong = results.filter(r => r.correct === false).length, nBlank = results.filter(r => r.blank).length;
     const raw = set.scoring === 'ssat' ? nCorrect - nWrong / 4 : nCorrect;
+    const reg = active.registry || { itemVersionIds: new Map() };
     const rows = results.map(r => ({
       run_id: run.id, user_id: profile.id, set_id: set.id, item_id: r.item.id, kind: r.item.type, skills: r.item.skills || [],
       chosen: r.chosen, correct: r.correct, blank: r.blank, timed_out: r.timed_out, latency_ms: r.latency_ms, note: r.note,
       dwell_ms: r.dwell_ms, over_cap: r.over_cap,
+      item_version_id: reg.itemVersionIds.get(r.item.sourceItem || r.item.id) ?? null, position: r.position,
+      first_answer_ms: r.first_answer_ms, n_changes: r.n_changes, reference_visible: false,
     }));
     const nOverCap = set.paceCapS ? results.filter(r => r.over_cap).length : null;
+    const events = active.events.map(e => ({ ...e, run_id: run.id, user_id: profile.id }));
+    const isJunk = items.length > 0 && durationS <= 1 && nBlank === items.length;   // the Sept 1 timer-bug signature, kept as a guard
     const ins = await sb.from('wc_drill_attempts').insert(rows).select();
-    if (ins.error) alert('Saving answers failed: ' + ins.error.message);
+    if (ins.error) { report('wc_drill_attempts.insert', ins.error, { run_id: run.id, n: rows.length }); alert('Saving answers failed: ' + ins.error.message); }
     const idByItem = new Map((ins.data || []).map(x => [x.item_id, x.id]));
-    await sb.from('wc_drill_runs').update({ finished_at: new Date().toISOString(), duration_s: durationS, timed_out: timedOut, n_items: items.length, n_correct: nCorrect, n_wrong: nWrong, n_blank: nBlank, raw_score: raw, logs_complete: nWrong === 0, n_over_cap: nOverCap, n_unreached: nBlank }).eq('id', run.id);
+    const upd = await sb.from('wc_drill_runs').update({ finished_at: new Date().toISOString(), duration_s: durationS, timed_out: timedOut, n_items: items.length, n_correct: nCorrect, n_wrong: nWrong, n_blank: nBlank, raw_score: raw, logs_complete: nWrong === 0, n_over_cap: nOverCap, n_unreached: nBlank, is_junk: isJunk }).eq('id', run.id);
+    if (upd.error) report('wc_drill_runs.update', upd.error, { run_id: run.id });
+    // evidence written beside the attempts: interaction events, the student's own lines, and the activity row
+    if (events.length) { const ev = await sb.from('wc_answer_events').insert(events); if (ev.error) report('wc_answer_events.insert', ev.error, { run_id: run.id, n: events.length }); }
+    const refl = [];
+    for (const p of (set.passages || [])) { const t = active.notes.get(p.id); if (t && t.trim()) refl.push({ user_id: profile.id, kind: 'author_point', run_id: run.id, passage_id: p.id, text: t.trim() }); }
+    if (set.recallPrompt && active.notes.get('_recall')?.trim()) refl.push({ user_id: profile.id, kind: 'recall', run_id: run.id, passage_id: '_recall', text: active.notes.get('_recall').trim() });
+    for (const r of results) if (r.item.type === 'analogy' && r.note && r.note.trim() && idByItem.get(r.item.id)) refl.push({ user_id: profile.id, kind: 'bridge', run_id: run.id, attempt_id: idByItem.get(r.item.id), text: r.note.trim() });
+    if (refl.length) { const rf = await sb.from('wc_reflections').insert(refl); if (rf.error) report('wc_reflections.insert(run)', rf.error, { run_id: run.id, n: refl.length }); }
+    if (!isJunk) {
+      const targets = [...new Set(items.flatMap(i => i.skills || []).filter(k => !k.startsWith('w:')))];
+      const act = await sb.from('wc_activity_log').insert({
+        user_id: profile.id, kind_id: ACTIVITY_KIND[purposeOf(set)] || 'drill', started_at: run.started_at || new Date(active.startedAt).toISOString(), ended_at: new Date().toISOString(),
+        minutes: Math.max(1, Math.round(durationS / 60)), targets, run_id: run.id,
+        outcome: { n_items: items.length, n_correct: nCorrect, n_wrong: nWrong, n_blank: nBlank, n_over_cap: nOverCap, timed_out: timedOut }, reported_by: 'app', created_by: profile.id,
+      });
+      if (act.error) report('wc_activity_log.insert(run)', act.error, { run_id: run.id });
+    }
     const done = { ...run, duration_s: durationS, timed_out: timedOut, n_correct: nCorrect, n_wrong: nWrong, n_blank: nBlank, raw_score: raw, n_over_cap: nOverCap, n_unreached: nBlank };
     active = null; $('#tabs').hidden = false;
     renderResults(host, set, done, results.map(r => ({ ...r, attemptId: idByItem.get(r.item.id) })));
@@ -422,11 +532,12 @@ const Drills = (() => {
       const mark = r.correct === true ? '✓' : r.correct === false ? '✗' : (r.timed_out ? '⏱' : '—');
       const cls = r.correct === true ? 'good' : r.correct === false ? 'bad' : 'blank';
       const node = el('div', `drill-result ${cls}`);
-      const yours = it.type === 'checklist' ? (r.chosen === 'ok' ? '✓' : r.chosen === 'miss' ? '✗' : 'unmarked') : (r.chosen ?? (r.timed_out ? 'not reached' : 'blank'));
-      const right = it.type === 'checklist' ? '' : it.type === 'numeric' ? it.answer : it.answer;
+      const yours = r.chosen ?? (r.timed_out ? 'not reached' : 'blank');
+      const right = it.answer;
       node.append(el('div', 'drill-q', `<span class="drill-n">${mark} ${i + 1}.</span> ${promptHtml(it)}`));
+      // the dwell readout stays a pacing-set feature on screen; dwell is stored for every set
       const dwell = set.paceCapS && r.dwell_ms != null ? ` · <span class="${r.over_cap ? 'pace-over' : 'dim'}">⏱ ${fmtClock(Math.round(r.dwell_ms / 1000))}${r.over_cap ? ' — over the cap' : ''}</span>` : '';
-      if (it.type !== 'checklist') node.append(el('div', 'drill-ans', `Your answer: <b>${esc(yours)}</b>${r.correct === true ? '' : ` · Correct: <b>${esc(right)}</b>`}${dwell}`));
+      node.append(el('div', 'drill-ans', `Your answer: <b>${esc(yours)}</b>${r.correct === true ? '' : ` · Correct: <b>${esc(right)}</b>`}${dwell}`));
       if (it.explain && (r.correct !== true || it.type === 'numeric')) node.append(el('div', 'drill-explain', it.explain));
       if (r.correct === false) {
         const lg = el('div', 'drill-note');
@@ -445,8 +556,24 @@ const Drills = (() => {
         const pending = misses.filter(m => words(logs.get(m.attemptId) ?? m.error_log) < 4);
         if (pending.length) { msg.textContent = `${pending.length} line${pending.length > 1 ? 's' : ''} still need at least 4 words.`; return; }
         save.disabled = true;
-        for (const [id, text] of logs) await sb.from('wc_drill_attempts').update({ error_log: text.trim() }).eq('id', id);
-        await sb.from('wc_drill_runs').update({ logs_complete: true }).eq('id', run.id);
+        // dual write (Phase 1): the legacy column keeps the UI working; wc_reflections keeps every version of every line
+        const ids = [...logs.keys()].filter(Boolean);
+        let latest = new Map();
+        if (ids.length) {
+          const prev = await sb.from('wc_reflections').select('id, attempt_id, created_at').eq('kind', 'error_log').in('attempt_id', ids).order('created_at', { ascending: true });
+          if (prev.error) report('wc_reflections.select', prev.error, { run_id: run.id });
+          for (const p of (prev.data || [])) latest.set(p.attempt_id, p.id);
+        }
+        for (const [id, text] of logs) {
+          if (!id) continue;
+          const t = text.trim();
+          const u = await sb.from('wc_drill_attempts').update({ error_log: t }).eq('id', id);
+          if (u.error) report('wc_drill_attempts.update(error_log)', u.error, { attempt_id: id });
+          const r = await sb.from('wc_reflections').insert({ user_id: profile.id, kind: 'error_log', attempt_id: id, run_id: run.id, text: t, supersedes_id: latest.get(id) ?? null });
+          if (r.error) report('wc_reflections.insert(error_log)', r.error, { attempt_id: id });
+        }
+        const u2 = await sb.from('wc_drill_runs').update({ logs_complete: true }).eq('id', run.id);
+        if (u2.error) report('wc_drill_runs.update(logs_complete)', u2.error, { run_id: run.id });
         msg.textContent = ''; save.textContent = 'Saved ✓';
         setTimeout(() => renderList(host), 600);
       });
@@ -457,63 +584,7 @@ const Drills = (() => {
     typeset(host); window.scrollTo(0, 0);
   }
 
-  // ---------- coach view ----------
-  async function renderCoach(card, student) {
-    const [runs, att] = await Promise.all([loadRuns(student.id), loadAttempts(student.id), ensureRemote()]);
-    const finished = runs.filter(r => r.finished_at);
-    card.append(el('h2', null, 'Drills'));
-    if (!finished.length) { card.append(el('p', 'sub', 'No drill sets completed yet.')); return; }
-    const skills = new Map();
-    for (const a of att) {
-      if (a.correct == null) continue;
-      for (const k of a.skills || []) {
-        const s = skills.get(k) || { n: 0, c: 0, last: null, lastMiss: null };
-        s.n++; if (a.correct) s.c++; else s.lastMiss = a.created_at; s.last = a.created_at; skills.set(k, s);
-      }
-    }
-    const rowsSk = [...skills.entries()].map(([k, s]) => ({ k, ...s, pct: s.c / s.n })).filter(r => !r.k.startsWith('w:'));
-    const weak = rowsSk.filter(r => r.n - r.c > 0).sort((a, b) => (a.pct - b.pct) || (b.n - a.n)).slice(0, 12);
-    if (weak.length) {
-      card.append(el('p', 'sub', 'Where the misses cluster (lowest accuracy first):'));
-      const tbl = el('table', 'tbl', '<tr><th>skill</th><th>right</th><th>tries</th><th>last miss</th></tr>');
-      for (const r of weak) tbl.insertAdjacentHTML('beforeend', `<tr><td>${esc(skillLabel(r.k))}</td><td>${r.c}</td><td>${r.n}</td><td>${fmtDate(r.lastMiss)}</td></tr>`);
-      card.append(tbl);
-    }
-    const wordMiss = [...skills.entries()].filter(([k, s]) => k.startsWith('w:') && s.n - s.c > 0).map(([k]) => k.slice(2));
-    if (wordMiss.length) card.append(el('p', 'flag', `Words missed in drills: ${esc(wordMiss.join(', '))}`));
-    const tbl = el('table', 'tbl', '<tr><th>date</th><th>set</th><th>score</th><th>time</th><th>log</th></tr>');
-    for (const r of finished.slice(0, 12)) {
-      const s = setById(r.set_id);
-      const sc = s?.type === 'card' ? 'read' : r.scoring === 'ssat' ? `${r.n_correct}/${r.n_items} · raw ${r.raw_score}` : `${r.n_correct}/${r.n_items}`;
-      tbl.insertAdjacentHTML('beforeend', `<tr><td>${fmtDate(r.started_at)}</td><td>${esc(s?.title || r.set_id)}</td><td>${sc}${r.n_blank ? ` · ${r.n_blank} blank` : ''}${r.n_over_cap != null ? ` · <span class="${r.n_over_cap ? 'pace-over' : ''}">${r.n_over_cap} over cap</span>` : ''}${r.timed_out ? ' ⏱' : ''}</td><td>${r.duration_s != null ? fmtClock(r.duration_s) : '—'}</td><td>${r.n_wrong === 0 ? '—' : r.logs_complete ? '✓' : 'pending'}</td></tr>`);
-    }
-    card.append(tbl);
-    const logged = att.filter(a => a.error_log).sort((a, b) => b.created_at < a.created_at ? -1 : 1).slice(0, 8);
-    if (logged.length) {
-      card.append(el('h2', null, 'Error log (latest)'));
-      const ul = el('ul', 'miss-list');
-      for (const a of logged) {
-        const it = setById(a.set_id)?.items.find(i => i.id === a.item_id);
-        ul.append(el('li', null, `<span class="w">${esc((a.skills || []).filter(k => !k.startsWith('w:')).map(skillLabel).join(', ') || a.item_id)}</span> — “${esc(a.error_log)}”${it?.type === 'checklist' ? ` <i>(${esc(it.prompt)})</i>` : ''}`));
-      }
-      card.append(ul);
-    }
-    // reading log: sets flagged readingLog — passage score, recall score, and the lines the student wrote
-    const logSets = new Set(D.sets.filter(s => s.readingLog).map(s => s.id));
-    const readRuns = finished.filter(r => logSets.has(r.set_id)).slice(0, 12);
-    if (readRuns.length) {
-      card.append(el('h2', null, 'Reading log'));
-      const ul = el('ul', 'miss-list');
-      for (const r of readRuns) {
-        const mine = att.filter(a => a.run_id === r.id);
-        const recall = mine.filter(a => (a.skills || []).includes('rd-recall'));
-        const rc = recall.filter(a => a.correct).length;
-        const notes = [...new Set(mine.map(a => a.note).filter(Boolean))];
-        ul.append(el('li', null, `<span class="w">${esc(setById(r.set_id)?.title || r.set_id)}</span> — ${fmtDate(r.started_at)} · passage ${r.n_correct - rc}/${r.n_items - recall.length} · recall <b>${rc}/${recall.length}</b>${notes.length ? ' — “' + notes.map(esc).join('” · “') + '”' : ''}`));
-      }
-      card.append(ul);
-    }
-  }
-
-  return { init, renderList, renderCoach, startSet, ensureRemote, _grade: grade, _normNum: normNum, _loadRuns: loadRuns, _loadAttempts: loadAttempts };
+  return { init, renderList, startSet, ensureRemote, _grade: grade, _normNum: normNum, _loadRuns: loadRuns, _loadAttempts: loadAttempts,
+    // exposed for tests and the coach panel
+    _canon: canon, _setHash: setHash, _dwellOf: dwellOf, _conditionsOf: conditionsOf, _purposeOf: purposeOf };
 })();
