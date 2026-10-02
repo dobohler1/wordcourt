@@ -101,16 +101,17 @@ $$;
 
 create or replace function public.wc_build_learner_state(p_user uuid default null)
 returns jsonb language plpgsql security definer set search_path = '' as $$
-declare v_method text := 'v0'; v_version text := '2026-10-02'; v_n int := 0; r record;
+declare v_method text := 'v0'; v_version text := '2026-10-02b'; v_n int := 0; r record;
 begin
   for r in select id from public.wc_profiles where role = 'student' and (p_user is null or id = p_user) loop
     -- primary skill per attempt: annotation when present, else the first concept/format tag on the attempt
-    create temp table if not exists wc_att (user_id uuid, run_id uuid, attempt_id bigint, skill text, domain_id text, correct boolean, timed boolean, cap_s int, over_cap boolean, local_day date, created_at timestamptz) on commit drop;
+    create temp table if not exists wc_att (user_id uuid, run_id uuid, attempt_id bigint, skill text, domain_id text, proc text[], correct boolean, timed boolean, cap_s int, over_cap boolean, local_day date, created_at timestamptz) on commit drop;
     truncate wc_att;
     insert into wc_att
       select a.user_id, a.run_id, a.id,
              coalesce(iv.primary_skill_id, (select k from unnest(a.skills) k join public.wc_skills s on s.id = k where s.kind in ('concept','format') order by array_position(a.skills, k) limit 1)),
              coalesce(sk.domain_id, (select s.domain_id from unnest(a.skills) k join public.wc_skills s on s.id = k where s.domain_id is not null order by array_position(a.skills, k) limit 1)),
+             coalesce(iv.process_skill_ids, (select array_agg(k order by array_position(a.skills, k)) from unnest(a.skills) k join public.wc_skills s on s.id = k where s.kind = 'process')),
              a.correct, coalesce((rn.conditions->>'timed')::boolean, rn.set_id like 'pace_%' or rn.scoring in ('ssat','isee')), (rn.conditions->>'cap_s')::int, a.over_cap, rn.local_day, a.created_at
       from public.wc_drill_attempts a
       join public.wc_drill_runs rn on rn.id = a.run_id and rn.finished_at is not null and not rn.is_junk
@@ -144,6 +145,28 @@ begin
       from (select domain_id, count(*) n, count(*) filter (where correct) c, count(distinct (timed, cap_s)) nc, count(distinct skill) nsk, max(created_at) last_at,
                    public.wc_wilson(count(*) filter (where correct), count(*)) w
             from wc_att where domain_id is not null group by domain_id) x;
+
+    -- process skill × execution (QC method, reading processes): pooled over attempts whose item lists the skill as a process skill.
+    -- Skills that already have a primary-skill row are skipped so each skill gets one execution row per build.
+    insert into public.wc_learner_state (user_id, subject_type, subject_id, level, estimate, ci_low, ci_high, n_evidence, n_conditions, last_evidence_at, params, status, method, method_version, derived_from)
+      select r.id, 'skill', k, 'execution', (w).p, (w).lo, (w).hi, n, nc, last_at,
+             jsonb_build_object('n_correct', c, 'n_sittings', ns, 'n_timed', nt, 'role', 'process'),
+             case when n < 3 then 'insufficient' else 'estimated' end, v_method, v_version, jsonb_build_object('source', 'wc_drill_attempts', 'role', 'process', 'attempt_ids', ids)
+      from (select k, count(*) n, count(*) filter (where correct) c, count(distinct (timed, cap_s)) nc, count(distinct local_day) ns, count(*) filter (where timed) nt, max(created_at) last_at,
+                   public.wc_wilson(count(*) filter (where correct), count(*)) w, (array_agg(attempt_id order by created_at))[1:50] ids
+            from wc_att t, unnest(t.proc) k
+            where k not in (select skill from wc_att where skill is not null) group by k) x;
+
+    -- domain × execution for domains reached only through process skills (e.g. qc): one vote per attempt
+    insert into public.wc_learner_state (user_id, subject_type, subject_id, level, estimate, ci_low, ci_high, n_evidence, n_conditions, last_evidence_at, params, status, method, method_version, derived_from)
+      select r.id, 'domain', domain_id, 'execution', (w).p, (w).lo, (w).hi, n, nc, last_at, jsonb_build_object('n_correct', c, 'n_skills', nsk, 'role', 'process'),
+             case when n < 3 then 'insufficient' else 'estimated' end, v_method, v_version, jsonb_build_object('source', 'wc_drill_attempts', 'role', 'process')
+      from (select domain_id, count(*) n, count(*) filter (where correct) c, count(distinct (timed, cap_s)) nc, count(distinct skill) nsk, max(created_at) last_at,
+                   public.wc_wilson(count(*) filter (where correct), count(*)) w
+            from (select distinct on (t.attempt_id, s.domain_id) t.attempt_id, s.domain_id, k skill, t.correct, t.timed, t.cap_s, t.created_at
+                  from wc_att t, unnest(t.proc) k join public.wc_skills s on s.id = k
+                  where s.domain_id is not null and s.domain_id not in (select domain_id from wc_att where domain_id is not null)) d
+            group by domain_id) x;
 
     -- word × execution (vocab lane: counted flashcard and question answers) and word × retention (checkpoint probes)
     insert into public.wc_learner_state (user_id, subject_type, subject_id, level, estimate, ci_low, ci_high, n_evidence, n_conditions, last_evidence_at, params, status, method, method_version, derived_from)

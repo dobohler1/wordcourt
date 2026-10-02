@@ -197,7 +197,7 @@ create table if not exists public.wc_learner_state (
   computed_at      timestamptz not null default now()
 );
 create index if not exists wc_learner_state_lookup_idx on public.wc_learner_state (user_id, subject_type, subject_id, level, method, computed_at desc);
-create or replace view public.wc_learner_state_current as
+create or replace view public.wc_learner_state_current with (security_invoker = on) as
   select distinct on (user_id, subject_type, subject_id, level, method) *
   from public.wc_learner_state
   order by user_id, subject_type, subject_id, level, method, computed_at desc;
