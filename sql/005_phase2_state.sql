@@ -20,8 +20,9 @@ begin
     on conflict (test, level, section) do update set n_items = excluded.n_items, minutes = excluded.minutes, blank_rule = excluded.blank_rule, target_raw = excluded.target_raw, verified = excluded.verified, notes = excluded.notes;
   insert into public.wc_section_domains (section_id, domain_id, n_items, per_item_s, verified)
     select ts.id, dm.key, dm.value::smallint, round((s->>'minutes')::numeric * 60 / (s->>'n')::numeric)::smallint, false
-    from jsonb_array_elements(j->'sections') s, jsonb_each_text(s->'domains') dm
+    from jsonb_array_elements(j->'sections') s
     join public.wc_test_sections ts on ts.test = s->>'test' and ts.level = 'upper' and ts.section = s->>'section'
+    cross join lateral jsonb_each_text(s->'domains') dm
     on conflict (section_id, domain_id) do update set n_items = excluded.n_items, per_item_s = excluded.per_item_s;
   insert into public.wc_skills (id, label, kind, strand, domain_id, lesson_n, word_id)
     select n->>'id', n->>'label', n->>'kind', n->>'strand', n->>'domain', (n->>'lesson')::smallint,
@@ -33,7 +34,7 @@ begin
   insert into public.wc_skill_edges (skill_id, requires_id)
     select n->>'id', r from jsonb_array_elements(j->'nodes') n, jsonb_array_elements_text(n->'requires') r
     on conflict do nothing;
-  return jsonb_build_object('version', j->>'version', 'domains', (select count(*) from public.wc_domains), 'sections', (select count(*) from public.wc_test_sections),
+  return jsonb_build_object('version', j->>'version', 'domains', (select count(*) from public.wc_domains), 'sections', (select count(*) from public.wc_test_sections), 'section_domains', (select count(*) from public.wc_section_domains),
     'skills', (select count(*) from public.wc_skills), 'edges', (select count(*) from public.wc_skill_edges));
 end $$;
 revoke execute on function public.wc_import_reference(text) from public, anon, authenticated;
@@ -178,7 +179,7 @@ begin
       where s.rn = 1;
     insert into public.wc_learner_state (user_id, subject_type, subject_id, level, estimate, ci_low, ci_high, n_evidence, n_conditions, last_evidence_at, params, status, method, method_version, derived_from)
       select r.id, 'section', ts.test || ':' || ts.section, 'readiness',
-             round(least(1, greatest(0, 0.5 + ((sc->>'raw')::numeric - ts.target_raw) / (2 * sqrt(ts.n_items)))), 4), null, null, 1, 1, s.sat_on::timestamptz,
+             round(least(1, greatest(0, 0.5 + ((sc->>'raw')::numeric - ts.target_raw) / (2 * sqrt(ts.n_items::numeric)))), 4), null, null, 1, 1, s.sat_on::timestamptz,
              jsonb_build_object('latest_raw', (sc->>'raw')::int, 'target_raw', ts.target_raw, 'n_items', ts.n_items, 'gap', ts.target_raw - (sc->>'raw')::int),
              'estimated', v_method, v_version, jsonb_build_object('source', 'wc_test_sittings', 'note', 'v0 heuristic: 0.5 at target, +/- one raw-sd per 2*sqrt(n)')
       from (select *, row_number() over (partition by split_part(test, '_', 1) order by sat_on desc) rn from public.wc_test_sittings where user_id = r.id) s
