@@ -111,15 +111,32 @@
       btn.addEventListener('click', () => startSession('drill'));
       const wrap = el('div', 'center-actions'); wrap.append(btn); card.append(wrap);
       try { const ms = await moneyStrip(); if (ms) card.append(ms); } catch (e) { /* money strip is optional */ }
+      try { const ck = await checkpointCard(); if (ck) card.append(ck); } catch (e) { Engine.reportError('checkpointCard', e); }
     }
     host.append(card);
   }
 
+  // weekly checkpoint: re-test mastered words to lock in their money (Phase 2)
+  async function checkpointCard() {
+    const st = await Engine.checkpointStatus();
+    if (!st.available) {
+      if (st.reason === 'done' && st.last) return el('p', 'money-next', `✓ This week's checkpoint is done: ${st.last.retained}/${st.last.sampled} words held.`);
+      return null;
+    }
+    const box = el('div', 'checkpoint-strip');
+    box.append(el('p', 'money-next', `<b>Checkpoint</b> — ${st.words.length} mastered word${st.words.length === 1 ? '' : 's'} to re-test. Get them right to lock in <b>${money(st.cents)}</b>; a miss sends the word back to training.`));
+    const b = el('button', 'btn', 'Take the checkpoint');
+    b.addEventListener('click', () => startSession('checkpoint', st.words));
+    const wrap = el('div', 'center-actions'); wrap.append(b); box.append(wrap);
+    return box;
+  }
+
   // ---------- session player ----------
-  async function startSession(kind) {
+  async function startSession(kind, checkpointWords) {
     const { row, paying } = await Engine.openSession(kind);
-    const built = kind === 'diagnostic' ? Engine.buildDiagnostic() : Engine.buildSession();
-    session = { row, paying, kind, items: built.items, idx: 0, xp: 0, engaged: 0, answered: 0, rushedCount: 0, misses: [], mastered: [], paid: 0, startedAt: Date.now() };
+    const built = kind === 'diagnostic' ? Engine.buildDiagnostic() : kind === 'checkpoint' ? Engine.buildCheckpoint(checkpointWords || []) : Engine.buildSession();
+    session = { row, paying, kind, items: built.items, idx: 0, xp: 0, engaged: 0, answered: 0, rushedCount: 0, misses: [], mastered: [], paid: 0, startedAt: Date.now(),
+      probe: kind === 'checkpoint' ? { words: built.words || [], retained: 0, vestedCents: 0, revertedCents: 0 } : null };
     for (const v of document.querySelectorAll('.tab-view')) v.hidden = true;
     $('#tabs').hidden = true;               // no escaping mid-session
     $('#tab-view-session').hidden = false;
@@ -173,9 +190,14 @@
     if (session.kind !== 'diagnostic') session.answered++;
     const correct = opt.id === item.answerId;
     btn.classList.add(correct ? 'correct' : 'wrong');
-    const res = session.kind === 'diagnostic'
-      ? await diagnosticAnswer(item, correct, latency)
-      : await Engine.processAnswer(session.row, item, { correct, latencyMs: latency });
+    let res;
+    if (session.kind === 'diagnostic') res = await diagnosticAnswer(item, correct, latency);
+    else if (session.kind === 'checkpoint') {
+      res = await Engine.processCheckpointAnswer(session.row, item, { correct, latencyMs: latency });
+      session.answered++;
+      if (correct) { session.probe.retained++; session.probe.vestedCents += res.vestedCents; session.xp += 4; }
+      else { session.probe.revertedCents += res.revertedCents; session.misses.push({ word: item.word, note: 'back to training' }); }
+    } else res = await Engine.processAnswer(session.row, item, { correct, latencyMs: latency });
     showFeedback(card, item.word, correct, res, {
       defLine: `<b>${esc(item.word.word)}</b> <i>(${esc(item.word.pos || '')})</i> — ${esc(item.word.definition)} ${chargeChip(item.word.charge)}`,
     });
@@ -309,7 +331,9 @@
       if (res.masteredNow) { session.mastered.push(word); session.paid += res.paidCents; }
     }
     const cls = res.rushed ? 'rushed' : (correct ? 'good' : 'bad');
-    const head = res.rushed ? '⚡ Too fast to count — slow down, it\'s not a race'
+    const head = session.kind === 'checkpoint'
+      ? (correct ? `🔒 Still yours${res.vestedCents ? ' — ' + money(res.vestedCents) + ' locked in' : ''}` : `✗ Slipped — back to training${res.revertedCents ? ', ' + money(res.revertedCents) + ' returned' : ''}`)
+      : res.rushed ? '⚡ Too fast to count — slow down, it\'s not a race'
       : res.alreadyKnown ? '✓ You already own this one — it leaves your ladder (no pay for words you knew!)'
       : res.masteredNow ? `🏆 MASTERED${res.paidCents ? ' — +' + money(res.paidCents) : ''}`
       : correct ? '✓ Nice' : '✗ Not this time — it goes back in the ladder';
@@ -365,19 +389,29 @@
     const durationS = Math.round((Date.now() - session.startedAt) / 1000);
     const focus = session.answered ? (session.answered - session.rushedCount) / session.answered : 1;
     const xp = Math.round(session.xp * (0.5 + 0.5 * focus));
+    if (session.kind === 'checkpoint' && session.probe) await Engine.recordCheckpoint(session.row, session.probe);
     await Engine.closeSession(session.row, { xp, focus: Math.round(focus * 1000) / 1000, durationS });
     for (const v of document.querySelectorAll('.tab-view')) v.hidden = true;
     $('#tab-view-wrap').hidden = false;
     const host = $('#wrap-card'); host.innerHTML = '';
     const card = el('div', 'card');
-    card.append(el('h2', null, session.kind === 'diagnostic' ? 'Scouting complete 🗺️' : 'Session complete ✅'));
+    card.append(el('h2', null, session.kind === 'diagnostic' ? 'Scouting complete 🗺️' : session.kind === 'checkpoint' ? 'Checkpoint complete 🔒' : 'Session complete ✅'));
     const stats = el('div', 'stat-row');
-    stats.append(
-      el('div', 'stat', `<b>${xp}</b><span>xp</span>`),
-      el('div', 'stat', `<b>${Math.round(focus * 100)}%</b><span>focus</span>`),
-      el('div', 'stat', `<b>${session.mastered.length}</b><span>mastered</span>`),
-    );
-    if (session.paid) stats.append(el('div', 'stat money', `<b>+${money(session.paid)}</b><span>earned today</span>`));
+    if (session.kind === 'checkpoint') {
+      const p = session.probe;
+      stats.append(
+        el('div', 'stat', `<b>${p.retained}/${p.words.length}</b><span>still yours</span>`),
+        el('div', 'stat money', `<b>${money(p.vestedCents)}</b><span>locked in</span>`),
+      );
+      if (p.revertedCents) stats.append(el('div', 'stat', `<b>${money(p.revertedCents)}</b><span>returned to the pool</span>`));
+    } else {
+      stats.append(
+        el('div', 'stat', `<b>${xp}</b><span>xp</span>`),
+        el('div', 'stat', `<b>${Math.round(focus * 100)}%</b><span>focus</span>`),
+        el('div', 'stat', `<b>${session.mastered.length}</b><span>mastered</span>`),
+      );
+      if (session.paid) stats.append(el('div', 'stat money', `<b>+${money(session.paid)}</b><span>earned today</span>`));
+    }
     card.append(stats);
     if (session.kind !== 'diagnostic') { try { const ms = await moneyStrip(); if (ms) card.append(ms); } catch (e) { /* optional */ } }
     if (session.kind === 'diagnostic') {

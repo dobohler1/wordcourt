@@ -254,13 +254,16 @@ const Dashboard = (() => {
   // ----- system panel: is the evidence being captured? -----
   async function systemPanel(host, today) {
     const since = new Date(Date.now() - 7 * 864e5).toISOString();
-    const [flagsR, errR, attR, ansR, runsR, verR] = await Promise.all([
+    const [flagsR, errR, attR, ansR, runsR, verR, stateR, annR, ckR] = await Promise.all([
       sb.from('wc_flags').select('name, enabled, description').order('name'),
       sb.from('wc_client_errors').select('site, message, created_at').gte('created_at', since).order('created_at', { ascending: false }).limit(20),
       sb.from('wc_drill_attempts').select('run_id, created_at').gte('created_at', since),
       sb.from('wc_answers').select('created_at').gte('created_at', since),
       sb.from('wc_drill_runs').select('id, n_items, finished_at, is_junk, set_version_id, started_at').not('finished_at', 'is', null),
       sb.from('wc_set_versions').select('id', { count: 'exact', head: true }),
+      sb.from('wc_learner_state').select('computed_at, method').order('computed_at', { ascending: false }).limit(1),
+      sb.from('wc_item_versions').select('id', { count: 'exact', head: true }).not('primary_skill_id', 'is', null),
+      sb.from('wc_checkpoints').select('user_id, week_start, retained, sampled, vested_cents, reverted_cents').order('week_start', { ascending: false }).limit(6),
     ]);
     const card = el('div', 'card sys-panel');
     card.append(el('h2', null, 'System'));
@@ -273,7 +276,10 @@ const Dashboard = (() => {
     for (const a of (attR.data || [])) { const d = dayOf(new Date(a.created_at)); byDay.set(d, (byDay.get(d) || 0) + 1); }
     for (const a of (ansR.data || [])) { const d = dayOf(new Date(a.created_at)); byDay.set(d, (byDay.get(d) || 0) + 1); }
     const days = []; for (let i = 6; i >= 0; i--) { const d = addDays(today, -i); days.push(`${d.slice(5)}: ${byDay.get(d) || 0}`); }
-    card.append(el('p', 'small', `Content build: <b>${esc(built ? fmtDate(built) + ' ' + new Date(built).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'unknown')}</b> · registry: <b>${verR.count ?? '?'}</b> set versions · runs without a version: <b>${unversioned}</b>`));
+    card.append(el('p', 'small', `Content build: <b>${esc(built ? fmtDate(built) + ' ' + new Date(built).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'unknown')}</b> · registry: <b>${verR.count ?? '?'}</b> set versions, <b>${annR.count ?? 0}</b> annotated items · runs without a version: <b>${unversioned}</b>`));
+    const lastState = stateR.data?.[0];
+    card.append(el('p', 'small', `Learner state: ${lastState ? `last built <b>${esc(fmtDate(lastState.computed_at))} ${new Date(lastState.computed_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</b> (method ${esc(lastState.method)})` : '<b>not built yet</b>'} · nightly at 4 am Pacific`));
+    if (ckR.data?.length) card.append(el('p', 'small', `Checkpoints: ${ckR.data.map(c => `${esc(fmtDay(c.week_start))} · ${c.retained}/${c.sampled} held · ${money(c.vested_cents || 0)} locked${c.reverted_cents ? ', ' + money(c.reverted_cents) + ' returned' : ''}`).join(' · ')}`));
     card.append(el('p', 'small', `Evidence rows per day (attempts + answers): ${esc(days.join(' · '))}`));
     card.append(el('p', 'small' + (mismatched.length ? ' no' : ''), `Runs this week whose attempts ≠ items: <b>${mismatched.length}</b>`));
     const errs = errR.data || [];

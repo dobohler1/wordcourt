@@ -261,6 +261,66 @@ const Engine = (() => {
     return { items: [...wordItems, ...qItems, ...prod, ...teach], kind: 'drill' };
   }
 
+  // ---------- weekly checkpoint (Phase 2, R11): retention probe + vesting ----------
+  // Samples mastered words that have not vested and have sat untouched for >= 7 days. A correct answer vests the
+  // word's earnings (ledger 'vest'); a miss reverts them (ledger 'revert') and sends the word back to learning.
+  // One checkpoint per ISO week per learner. Skill probes arrive with the planner (Phase 5).
+  const CHECKPOINT = { maxWords: 10, minGapDays: 7 };
+  const isoWeekStart = d => { const x = new Date(d + 'T12:00:00'); const dow = (x.getDay() + 6) % 7; x.setDate(x.getDate() - dow); return dayOf(x); };
+  function checkpointCandidates() {
+    const cutoff = new Date(Date.now() - CHECKPOINT.minGapDays * 864e5).toISOString();
+    return [...state.values()]
+      .filter(s => s.state === 'mastered' && !s.vested && (s.updated_at || '') <= cutoff)
+      .sort((a, b) => (a.updated_at || '').localeCompare(b.updated_at || ''))
+      .map(s => wordsById.get(s.word_id)).filter(Boolean);
+  }
+  async function checkpointStatus() {
+    if (!flag('checkpoint') || me.role !== 'student') return { available: false, reason: 'off' };
+    const week = isoWeekStart(todayStr());
+    const { data, error } = await db.from('wc_checkpoints').select('id, created_at, retained, sampled').eq('user_id', me.id).eq('week_start', week).limit(1);
+    if (error) { reportError('wc_checkpoints.select', error); return { available: false, reason: 'error' }; }
+    if (data && data.length) return { available: false, reason: 'done', last: data[0] };
+    const words = checkpointCandidates();
+    if (!words.length) return { available: false, reason: 'nothing_due' };
+    const sample = words.slice(0, CHECKPOINT.maxWords);
+    const cents = sample.reduce((t, w) => t + (state.get(w.id)?.earned_cents || 0), 0);
+    return { available: true, words: sample, cents, week };
+  }
+  function buildCheckpoint(words) {
+    const items = words.map((w, i) => ({ ...flashcardItem(w, i % 2 ? 'def2word' : 'word2def'), probe: true }));
+    return { items, kind: 'checkpoint', words };
+  }
+  /** A probe answer: counted regardless of speed; vest on correct, revert on miss. Returns { correct, vestedCents, revertedCents }. */
+  async function processCheckpointAnswer(sessionRow, item, { correct, latencyMs }) {
+    const w = item.word;
+    const ins = await db.from('wc_answers').insert({
+      user_id: me.id, session_id: sessionRow.id, kind: 'flashcard', word_id: w.id, question_id: null,
+      correct, chosen: null, latency_ms: latencyMs, counted: true, rushed: isRushed('flashcard', latencyMs), error_tag: 'probe',
+      scaffold_level: null, options_shown: optionsShown(item), local_day: todayStr(),
+    });
+    if (ins.error) reportError('wc_answers.insert(probe)', ins.error, { word_id: w.id });
+    const st = state.get(w.id) || {};
+    const cents = st.earned_cents || 0;
+    let vestedCents = 0, revertedCents = 0;
+    if (correct) {
+      if (cents > 0) { const l = await db.from('wc_ledger').insert({ user_id: me.id, cents, kind: 'vest', word_id: w.id, note: w.word }); if (l.error) reportError('wc_ledger.insert(vest)', l.error, { word_id: w.id }); else vestedCents = cents; }
+      await upsertWordState({ word_id: w.id, vested: true, due_on: addDays(todayStr(), 30), correct_streak: (st.correct_streak || 0) + 1 });
+    } else {
+      if (cents > 0) { const l = await db.from('wc_ledger').insert({ user_id: me.id, cents, kind: 'revert', word_id: w.id, note: w.word }); if (l.error) reportError('wc_ledger.insert(revert)', l.error, { word_id: w.id }); else revertedCents = cents; }
+      await upsertWordState({ word_id: w.id, state: 'learning', box: 0, due_on: todayStr(), correct_streak: 0, vested: false, earned_cents: 0, misses: (st.misses || 0) + 1, formats_hit: st.formats_hit || [] });
+    }
+    return { correct, vestedCents, revertedCents, word: w, counted: true, rushed: false, masteredNow: false, paidCents: 0, alreadyKnown: false };
+  }
+  async function recordCheckpoint(sessionRow, { words, retained, vestedCents, revertedCents }) {
+    const row = {
+      user_id: me.id, week_start: isoWeekStart(todayStr()), session_id: sessionRow.id, kind: 'word',
+      sampled_words: words.map(w => w.id), sampled: words.length, retained,
+      accuracy: words.length ? Math.round(1000 * retained / words.length) / 1000 : null, vested_cents: vestedCents, reverted_cents: revertedCents,
+    };
+    const { error } = await db.from('wc_checkpoints').insert(row);
+    if (error) reportError('wc_checkpoints.insert', error, { session_id: sessionRow.id });
+  }
+
   function buildDiagnostic() {
     // probe across tiers, priority order, mixed directions; plus 2 questions per section unscaffolded.
     // deterministic order + skip already-probed words so a mid-run refresh resumes cleanly.
@@ -510,12 +570,14 @@ const Engine = (() => {
     T, init, needsDiagnostic, buildSession, buildDiagnostic, openSession, closeSession,
     processAnswer, seedDiagnosticResult, logDiagnosticAnswer, streak, wordCounts, moneySummary, payoutPreview,
     flag, reportError, ANSWER_KIND,
+    checkpointStatus, buildCheckpoint, processCheckpointAnswer, recordCheckpoint, CHECKPOINT,
     get me() { return me; }, get words() { return words; }, get state() { return state; },
     get skills() { return skills; }, get strategy() { return strategy; },
     get deck() { return deck; }, deckRemaining, productionWords,
     clusterFor: id => (clusterOf.get(id) || [])[0] || null,
     wordsById: () => wordsById,
     // exposed for tests
-    _dates: { todayStr, addDays, dayOf, tzName }, _pickSessionWords: pickSessionWords, _dueReviews: dueReviews, _optionsShown: optionsShown,
+    _dates: { todayStr, addDays, dayOf, tzName, isoWeekStart }, _pickSessionWords: pickSessionWords, _dueReviews: dueReviews, _optionsShown: optionsShown,
+    _checkpointCandidates: checkpointCandidates,
   };
 })();

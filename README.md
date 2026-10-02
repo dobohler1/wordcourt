@@ -38,10 +38,20 @@ Every fact about what the learner did is written once and never rewritten:
 
 Dates are the learner's **local** calendar day (`local_day`, `tz`). Rows from before Sept 20, 2026 were stamped in UTC and were backfilled into `local_day` from their timestamps; the legacy `day` column is kept.
 
+## Learner model (Phase 2, Oct 2026)
+
+- **Reference layer**: `wc_test_sections` / `wc_domains` / `wc_section_domains` (test formats and domain item shares), `wc_skills` (191 nodes: concept, process, format, vocab; parents, aliases, lesson numbers) and `wc_skill_edges` (prerequisites). Source of truth is the private `analyst/taxonomy.json`; `reference_seed.json` here is its generated export, imported with `select public.wc_import_reference('<raw url at commit>/reference_seed.json')`.
+- **Annotations** on item versions (primary skill, process skills, per-choice rationale, difficulty) ride along in `content_registry.json` and are applied by `wc_import_registry`. They are metadata and never change an item's content hash.
+- **Practice tests**: `wc_test_sittings` and `wc_test_items` hold section scores and every captured miss from the platform tests (imported privately; learner results are not in this repo).
+- **Checkpoint**: a weekly Today-card session (flag `checkpoint`) that re-tests mastered words untouched for 7+ days. A pass vests the word's earnings (ledger `vest`); a miss reverts them (ledger `revert`) and returns the word to training. Rows in `wc_checkpoints`; probe answers carry `error_tag = 'probe'`.
+- **Learner state** (`wc_learner_state`, view `wc_learner_state_current`): append-only snapshots per learner × subject × level with Wilson intervals, built nightly by `public.wc_build_learner_state()` (pg_cron, 04:00 Pacific). Method `v0`: execution, speed, retention, test, readiness; knowledge and strategy have no instrument yet.
+- **Evidence guard**: a trigger rejects updates to the facts on attempts, runs, answers and completed sessions, and any delete or update on append-only tables.
+
 ## Flags (`wc_flags`, editable on the Dashboard's System panel)
 
 | Flag | Effect |
 |---|---|
+| `checkpoint` | weekly checkpoint card on Today for students with mastered, unvested words untouched 7+ days. |
 | `vocab_review_first` | the daily session fills up to 14 cards from due reviews, highest box first; new deck words only when fewer than 10 are due (`deck.json` `newPerDay` = 4). Off = legacy composition (6 oldest-due reviews + up to 8 new). |
 
 ## Content workflow
