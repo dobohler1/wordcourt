@@ -52,7 +52,18 @@ Dates are the learner's **local** calendar day (`local_day`, `tz`). Rows from be
 | Flag | Effect |
 |---|---|
 | `checkpoint` | weekly checkpoint card on Today for students with mastered, unvested words untouched 7+ days. |
+| `analyst_shadow` | the daily private script evaluates the Analyst trigger rules and calls the model. Off = no triggers, no calls, no cost. Written findings stay in the database either way. |
 | `vocab_review_first` | the daily session fills up to 14 cards from due reviews, highest box first; new deck words only when fewer than 10 are due (`deck.json` `newPerDay` = 4). Off = legacy composition (6 oldest-due reviews + up to 8 new). |
+
+## AI Analyst, shadow mode (Phase 3, Oct 2026)
+
+Nothing here reaches the student. The Analyst (Claude, Messages API, structured output) runs as a **private script** on the coach's machine against the service role; the repo holds only the parts that must stay in step with the app:
+
+- `planner.js`: the deterministic adaptive planner as a pure ES module (`plan(request, inputs, policy)`), **not loaded by `index.html`**. In Phase 3 the private script runs it to write `wc_plans` rows with `shadow = true`; the app never reads them. The 15 behavioral requirements of the planner design are `tests/planner.test.mjs`.
+- `sql/006_phase3.sql`: `wc_bank_items` (private practice-test items, no client policies), `wc_test_items.bank_item_id`, `wc_analyses.request/result/metrics`, `wc_plans.blocks`, the flag `analyst_shadow`, and `wc_write_analysis_result()` (service-role only; writes layers 2 and 4 in one transaction, never layer 1 or `wc_learner_state`).
+- Dashboard System panel: analyst runs (trigger, validator outcome, cost, tool calls, top finding, agreement with the coach's next action), findings by confidence bucket, shadow plans. No accept/reject controls (Phase 4).
+
+Flow (private, daily after the nightly state build): trigger rules → evidence compiler (deterministic dossier with evidence ids) → Analyst (adaptive thinking, five read-only lookup tools capped at six calls, 40k-token input guard, Batch API for weekly and practice-test runs) → validator (schema, evidence ids, R5, confidence floors, proposal bounds; one retry) → writer → shadow plan → comparison log. Findings and proposals land in `wc_findings` / `wc_assignments` (status `proposed`) and are visible only on the System panel.
 
 ## Content workflow
 
@@ -69,4 +80,7 @@ The private tooling lives outside this repo (nothing here holds a service-role k
 `node --test tests/*.test.mjs` covers local-date helpers across the 5 pm and DST boundaries, the answer-kind mapping,
 session composition under review backlogs, the numeric grader, dwell and answer-event bookkeeping, run
 conditions and purposes, canonical hashing (and its agreement with the build script), content validation,
-and a load-time smoke test of every script with a stub DOM.
+and a load-time smoke test of every script with a stub DOM. `tests/planner.test.mjs` holds the 15 behavioral
+fixtures of the adaptive planner (secure nodes, teach-before-practice, diagnose-first, prerequisite blocking, currency,
+floors, gates, start-rates, determinism, stable assignment ids, taper, retirement, fallbacks). The private analyst suite
+(`analyst/tests`, Python, outside the repo) covers compiler determinism, the validator, the cost guard and the trigger rules.

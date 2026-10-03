@@ -254,7 +254,7 @@ const Dashboard = (() => {
   // ----- system panel: is the evidence being captured? -----
   async function systemPanel(host, today) {
     const since = new Date(Date.now() - 7 * 864e5).toISOString();
-    const [flagsR, errR, attR, ansR, runsR, verR, stateR, annR, ckR] = await Promise.all([
+    const [flagsR, errR, attR, ansR, runsR, verR, stateR, annR, ckR, anR, fdR, plR] = await Promise.all([
       sb.from('wc_flags').select('name, enabled, description').order('name'),
       sb.from('wc_client_errors').select('site, message, created_at').gte('created_at', since).order('created_at', { ascending: false }).limit(20),
       sb.from('wc_drill_attempts').select('run_id, created_at').gte('created_at', since),
@@ -264,6 +264,9 @@ const Dashboard = (() => {
       sb.from('wc_learner_state').select('computed_at, method').order('computed_at', { ascending: false }).limit(1),
       sb.from('wc_item_versions').select('id', { count: 'exact', head: true }).not('primary_skill_id', 'is', null),
       sb.from('wc_checkpoints').select('user_id, week_start, retained, sampled, vested_cents, reverted_cents').order('week_start', { ascending: false }).limit(6),
+      sb.from('wc_analyses').select('id, kind, scope, status, started_at, finished_at, metrics, comparison, notes').eq('analyst_kind', 'model').order('started_at', { ascending: false }).limit(12),
+      sb.from('wc_findings').select('id, analysis_id, finding_type, subject_id, level, confidence, statement, status').order('confidence', { ascending: false }).limit(60),
+      sb.from('wc_plans').select('id, for_date, currency, minutes_available, minutes_planned, minutes_returned, phase, blocks, planner_version, created_at').eq('shadow', true).order('created_at', { ascending: false }).limit(6),
     ]);
     const card = el('div', 'card sys-panel');
     card.append(el('h2', null, 'System'));
@@ -285,6 +288,41 @@ const Dashboard = (() => {
     const errs = errR.data || [];
     card.append(el('p', 'small' + (errs.length ? ' no' : ''), `Client errors, last 7 days: <b>${errs.length}</b>`));
     if (errs.length) { const ul = el('ul', 'miss-list'); for (const e of errs.slice(0, 8)) ul.append(el('li', null, `${esc(fmtDate(e.created_at))} · <span class="w">${esc(e.site)}</span> — ${esc(e.message)}`)); card.append(ul); }
+    // ----- Phase 3: Analyst shadow runs (coach-only; nothing here reaches the student) -----
+    const analyses = anR?.data || [], findings = fdR?.data || [];
+    card.append(el('h3', 'dash-h', 'Analyst (shadow)'));
+    if (!analyses.length) card.append(el('p', 'small', 'No analyst runs yet. Turn on <code>analyst_shadow</code> below to let the daily trigger script run.'));
+    else {
+      const weekAgo = Date.now() - 7 * 864e5;
+      const recent = analyses.filter(a => new Date(a.started_at).getTime() >= weekAgo);
+      const valid = recent.filter(a => a.metrics?.validator?.ok && !a.metrics?.retries).length;
+      const cost = recent.reduce((s, a) => s + (a.metrics?.cost_usd || 0), 0);
+      const compared = analyses.filter(a => a.comparison && a.comparison.agree != null);
+      const agree = compared.filter(a => a.comparison.agree).length;
+      const insuff = analyses.filter(a => a.status === 'insufficient_evidence').length;
+      card.append(el('p', 'small', `Last 7 days: <b>${recent.length}</b> runs · valid without retry <b>${recent.length ? Math.round(100 * valid / recent.length) : 0}%</b> · cost <b>$${cost.toFixed(2)}</b> · agreement with the coach's next action <b>${compared.length ? Math.round(100 * agree / compared.length) + '%' : 'n/a'}</b> (${compared.length} compared) · insufficient-evidence <b>${insuff}</b> of ${analyses.length}`));
+      const buckets = { high: findings.filter(f => f.confidence >= 0.8).length, mid: findings.filter(f => f.confidence >= 0.5 && f.confidence < 0.8).length, low: findings.filter(f => f.confidence < 0.5).length };
+      card.append(el('p', 'small', `Findings by confidence: ≥0.80 <b>${buckets.high}</b> · 0.50–0.79 <b>${buckets.mid}</b> · <0.50 <b>${buckets.low}</b>`));
+      const ul = el('ul', 'miss-list');
+      for (const a of analyses.slice(0, 8)) {
+        const top = findings.filter(f => f.analysis_id === a.id).sort((x, y) => y.confidence - x.confidence)[0];
+        const m = a.metrics || {};
+        const v = m.validator ? (m.validator.ok ? (m.retries ? 'valid after retry' : 'valid') : 'rejected') : (a.status === 'running' ? 'running' : a.status);
+        const cmp = a.comparison ? (a.comparison.agree == null ? 'no coach action yet' : (a.comparison.agree ? 'agrees' : 'disagrees') + ` (coach: ${esc(a.comparison.coach_next?.kind_id || '?')} → ${esc((a.comparison.coach_next?.targets || []).join(', ') || '?')})`) : '';
+        ul.append(el('li', null, `${esc(fmtDate(a.started_at))} · <b>${esc(a.scope?.trigger || a.kind)}</b> · ${esc(v)} · $${(m.cost_usd || 0).toFixed(3)} · ${m.tool_calls || 0} tools · ${m.latency_ms ? Math.round(m.latency_ms / 1000) + 's' : ''}${top ? ` — <span class="w">${esc(top.finding_type)}</span> ${esc(top.subject_id)} @${Number(top.confidence).toFixed(2)}: ${esc(top.statement)}` : (a.notes ? ` — ${esc(a.notes.slice(0, 140))}` : '')}${cmp ? ` · <span class="dim">${cmp}</span>` : ''}`));
+      }
+      card.append(ul);
+    }
+    const plans = plR?.data || [];
+    if (plans.length) {
+      card.append(el('h3', 'dash-h', 'Shadow plans'));
+      const ul = el('ul', 'miss-list');
+      for (const p of plans) {
+        const blocks = (p.blocks || []).map(b => `${esc(b.action)}${b.target_node_ids?.length ? ' ' + esc(b.target_node_ids.join('+')) : ''} ${b.est_minutes}m`).join(' · ');
+        ul.append(el('li', null, `${esc(fmtDay(p.for_date))} · ${esc(p.currency)} · ${p.minutes_planned}/${p.minutes_available} min planned, ${p.minutes_returned} returned · ${esc(p.phase || '')} · <span class="dim">${blocks || 'no blocks'}</span>`));
+      }
+      card.append(ul);
+    }
     card.append(el('h3', 'dash-h', 'Flags'));
     for (const f of (flagsR.data || [])) {
       const row = el('label', 'flag-row');

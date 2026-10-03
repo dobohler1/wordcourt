@@ -5,7 +5,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { loadApp, root } from './harness/load.mjs';
 
-const analystDir = process.env.WC_ANALYST_DIR || path.join(process.env.HOME || '', 'icloud/claude/SOTC/testPrep/analyst');
+const analystDir = process.env.WC_ANALYST_DIR || path.join(process.env.HOME || '', 'icloud/claude/wordcourt/analyst');
 const script = path.join(analystDir, 'build_content.mjs');
 const have = existsSync(script);
 
