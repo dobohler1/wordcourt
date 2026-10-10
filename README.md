@@ -52,6 +52,7 @@ Dates are the learner's **local** calendar day (`local_day`, `tz`). Rows from be
 | Flag | Effect |
 |---|---|
 | `checkpoint` | weekly checkpoint card on Today for students with mastered, unvested words untouched 7+ days. |
+| `week_plan` | the Drills tab shows a "This week" card with the coach's planned assignments (`wc_assignments`, status `planned`, made by the coach, `reason_codes.label` as the title) and pins them on the set rows; the Today card shows one progress line. Read-only for the student: done / pending come from runs. Off = nothing shown. |
 | `analyst_shadow` | the daily private script evaluates the Analyst trigger rules and calls the model. Off = no triggers, no calls, no cost. Written findings stay in the database either way. |
 | `vocab_review_first` | the daily session fills up to 14 cards from due reviews, highest box first; new deck words only when fewer than 10 are due (`deck.json` `newPerDay` = 4). Off = legacy composition (6 oldest-due reviews + up to 8 new). |
 

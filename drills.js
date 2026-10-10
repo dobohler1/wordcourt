@@ -10,6 +10,7 @@ const Drills = (() => {
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const words = s => String(s || '').trim().split(/\s+/).filter(Boolean).length;
   const todayStr = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+  const addDays = (day, n) => { const x = new Date(day + 'T12:00:00'); x.setDate(x.getDate() + n); return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`; };
   const fmtDate = iso => new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
   const typeset = node => { if (window.MathJax?.typesetPromise) window.MathJax.typesetPromise([node]).catch(() => {}); };
   // soft tones for pacing sets (created on the Begin click so the browser allows audio)
@@ -177,6 +178,33 @@ const Drills = (() => {
     return `${item.prompt ? `<div class="qc-info">${item.prompt}</div>` : ''}<table class="qc-table"><tr><th>Column A</th><th>Column B</th></tr><tr><td>${item.colA}</td><td>${item.colB}</td></tr></table>`;
   }
 
+  // ---------- week plan (flag week_plan): the coach's planned assignments, read-only for the student ----------
+  // Done rules are derived from runs, never written by the student: error_log -> every finished run of the set has its logs complete;
+  // set work -> a finished run of the set exists after the assignment was made; items without a set (platform work) are manual.
+  function weekPlanStatus(assignments, runs, today) {
+    const out = [];
+    for (const a of assignments) {
+      const label = a.reason_codes?.label || setById(a.set_id)?.title || a.kind_id;
+      const mine = runs.filter(r => r.set_id && r.set_id === a.set_id && r.finished_at);
+      let state = 'todo';
+      if (!a.set_id) state = 'manual';
+      else if (a.kind_id === 'error_log') { const pend = mine.filter(r => r.n_wrong && !r.logs_complete); state = mine.length && !pend.length ? 'done' : (pend.length ? 'pending' : 'todo'); }
+      else { const after = mine.filter(r => r.finished_at >= a.created_at); state = after.length ? (after.some(r => r.n_wrong && !r.logs_complete) ? 'pending' : 'done') : 'todo'; }
+      const overdue = state !== 'done' && state !== 'manual' && a.due_by < today;
+      out.push({ id: a.id, set_id: a.set_id, kind_id: a.kind_id, due_by: a.due_by, order: a.plan_order ?? 0, label, state, overdue });
+    }
+    return out.sort((x, y) => (x.due_by < y.due_by ? -1 : x.due_by > y.due_by ? 1 : x.order - y.order));
+  }
+  async function loadWeekPlan(userId) {
+    if (!Engine.flag || !Engine.flag('week_plan')) return [];
+    const today = todayStr();
+    const { data, error } = await sb.from('wc_assignments').select('id, kind_id, set_id, due_by, plan_order, reason_codes, created_at, status')
+      .eq('user_id', userId).eq('status', 'planned').eq('made_by_kind', 'human').gte('due_by', addDays(today, -7)).lte('due_by', addDays(today, 10)).order('due_by');
+    if (error) { Engine.reportError && Engine.reportError('wc_assignments.select', error); return []; }
+    return data || [];
+  }
+  const dueLabel = (d, today) => d === today ? 'today' : d === addDays(today, 1) ? 'tomorrow' : new Date(d + 'T12:00:00').toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
+
   // ---------- list view ----------
   async function renderList(host) {
     host.innerHTML = '<div class="loading">loading drills…</div>';
@@ -190,6 +218,33 @@ const Drills = (() => {
     intro.append(el('h2', null, 'Drills'), el('p', 'sub', 'The practice booklet, online. Everything is checked automatically; each miss asks for a one-line error log — <i>what got me</i> — before the set counts as finished.'));
     host.append(intro);
     const done = new Set(runs.filter(r => r.finished_at).map(r => r.set_id));
+    const today = todayStr();
+    let plan = [];
+    try { plan = weekPlanStatus(await loadWeekPlan(profile.id), runs, today); } catch (e) { plan = []; }
+    const planBySet = new Map();
+    if (plan.length) {
+      const nDone = plan.filter(p => p.state === 'done').length;
+      const card = el('div', 'card week-plan');
+      card.append(el('h2', null, `📌 This week <span class="drill-lock">${nDone} of ${plan.length} done · test Fri Oct 17</span>`));
+      card.append(el('p', 'sub', 'Before every timed set, say the three rules out loud: 90 seconds then move · never blank · answer the question asked. Plus 10 minutes of vocabulary every day.'));
+      const ul = el('ul', 'drill-list');
+      for (const p of plan) {
+        if (p.set_id && !planBySet.has(p.set_id)) planBySet.set(p.set_id, p);
+        const s = p.set_id ? setById(p.set_id) : null;
+        const st = p.state === 'done' ? '<span class="drill-status done">done ✓</span>' : p.state === 'pending' ? '<span class="drill-status pending">error log pending</span>' : p.state === 'manual' ? '<span class="drill-status todo">on the platform</span>' : `<span class="drill-status ${p.overdue ? 'pending' : 'todo'}">${p.overdue ? 'overdue' : 'to do'}</span>`;
+        const li = el('li', p.state === 'done' ? 'week-done' : '', `<div><b>${esc(dueLabel(p.due_by, today))}</b> · ${esc(p.label)}</div>`);
+        const right = el('div', 'drill-right', st);
+        if (s && p.state !== 'done') {
+          const mine = runs.filter(r => r.set_id === s.id && r.finished_at); const best = mine[0];
+          const btn = el('button', 'btn small-btn primary', p.kind_id === 'error_log' || (best && best.n_wrong && !best.logs_complete && p.state === 'pending') ? 'Finish log' : (best ? 'Redo' : 'Start'));
+          btn.disabled = !available(s, done);
+          btn.addEventListener('click', () => (best && best.n_wrong && !best.logs_complete) ? reopenLogs(host, s, best) : startSet(host, s));
+          right.append(btn);
+        }
+        li.append(right); ul.append(li);
+      }
+      card.append(ul); host.append(card);
+    }
     for (const [day, sets] of byDay) {
       const card = el('div', 'card');
       const open = sets.some(s => available(s, done));
@@ -204,7 +259,9 @@ const Drills = (() => {
           const sc = best.scoring === 'ssat' ? `raw ${best.raw_score}` : `${best.n_correct}/${best.n_items}`;
           status = `<span class="drill-status ${best.logs_complete || best.n_wrong === 0 ? 'done' : 'pending'}">${s.type === 'card' ? 'read' : sc}${best.n_wrong && !best.logs_complete ? ' · error log pending' : ''}</span>`;
         }
-        const li = el('li', null, `<div><b>${esc(s.title)}</b><div class="drill-sub">${esc(s.subtitle || '')}</div></div>`);
+        const wk = planBySet.get(s.id);
+        const pin = wk && wk.state !== 'done' ? ` <span class="drill-week">📌 due ${esc(dueLabel(wk.due_by, today))}</span>` : '';
+        const li = el('li', null, `<div><b>${esc(s.title)}</b>${pin}<div class="drill-sub">${esc(s.subtitle || '')}</div></div>`);
         const right = el('div', 'drill-right', status);
         const btn = el('button', 'btn small-btn' + (best ? '' : ' primary'), best ? (best.n_wrong && !best.logs_complete ? 'Finish log' : 'Redo') : (s.type === 'card' ? 'Read' : 'Start'));
         btn.disabled = !available(s, done);
@@ -584,7 +641,7 @@ const Drills = (() => {
     typeset(host); window.scrollTo(0, 0);
   }
 
-  return { init, renderList, startSet, ensureRemote, _grade: grade, _normNum: normNum, _loadRuns: loadRuns, _loadAttempts: loadAttempts,
+  return { init, renderList, startSet, ensureRemote, loadWeekPlan, weekPlanStatus, _grade: grade, _normNum: normNum, _loadRuns: loadRuns, _loadAttempts: loadAttempts,
     // exposed for tests and the coach panel
     _canon: canon, _setHash: setHash, _dwellOf: dwellOf, _conditionsOf: conditionsOf, _purposeOf: purposeOf };
 })();

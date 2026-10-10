@@ -111,9 +111,25 @@
       btn.addEventListener('click', () => startSession('drill'));
       const wrap = el('div', 'center-actions'); wrap.append(btn); card.append(wrap);
       try { const ms = await moneyStrip(); if (ms) card.append(ms); } catch (e) { /* money strip is optional */ }
+      try { const wk = await weekLine(); if (wk) card.append(wk); } catch (e) { Engine.reportError('weekLine', e); }
       try { const ck = await checkpointCard(); if (ck) card.append(ck); } catch (e) { Engine.reportError('checkpointCard', e); }
     }
     host.append(card);
+  }
+
+  // this week's planned work (flag week_plan): one line, tap goes to Drills
+  async function weekLine() {
+    if (!Engine.flag('week_plan')) return null;
+    const plan = await Drills.loadWeekPlan(profile.id);
+    if (!plan.length) return null;
+    const runs = await Drills._loadRuns(profile.id);
+    const today = Engine._dates.todayStr();
+    const st = Drills.weekPlanStatus(plan, runs, today);
+    const nDone = st.filter(x => x.state === 'done').length;
+    const next = st.find(x => x.state !== 'done');
+    const p = el('p', 'today-week', `📌 <b>This week: ${nDone} of ${st.length} done.</b>${next ? ` Next: ${esc(next.label)}${next.due_by === today ? ' (today)' : ''}.` : ' All done.'} <a href="#" class="week-link">Open Drills →</a>`);
+    p.querySelector('.week-link').addEventListener('click', ev => { ev.preventDefault(); showTab('drills'); });
+    return p;
   }
 
   // weekly checkpoint: re-test mastered words to lock in their money (Phase 2)
