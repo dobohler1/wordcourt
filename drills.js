@@ -184,25 +184,28 @@ const Drills = (() => {
   function weekPlanStatus(assignments, runs, today) {
     const out = [];
     for (const a of assignments) {
-      const label = a.reason_codes?.label || setById(a.set_id)?.title || a.kind_id;
-      const mine = runs.filter(r => r.set_id && r.set_id === a.set_id && r.finished_at);
+      const setId = a.set_id || (a.target_type === 'set' ? a.target_id : null);   // coach rows may name the set in target_id only
+      const label = a.reason_codes?.label || setById(setId)?.title || a.kind_id;
+      const mine = runs.filter(r => r.set_id && r.set_id === setId && r.finished_at);
       let state = 'todo';
-      if (!a.set_id) state = 'manual';
+      if (!setId) state = 'manual';
       else if (a.kind_id === 'error_log') { const pend = mine.filter(r => r.n_wrong && !r.logs_complete); state = mine.length && !pend.length ? 'done' : (pend.length ? 'pending' : 'todo'); }
       else { const after = mine.filter(r => r.finished_at >= a.created_at); state = after.length ? (after.some(r => r.n_wrong && !r.logs_complete) ? 'pending' : 'done') : 'todo'; }
       const overdue = state !== 'done' && state !== 'manual' && a.due_by < today;
-      out.push({ id: a.id, set_id: a.set_id, kind_id: a.kind_id, due_by: a.due_by, order: a.plan_order ?? 0, label, state, overdue });
+      out.push({ id: a.id, set_id: setId, kind_id: a.kind_id, due_by: a.due_by, order: a.plan_order ?? 0, label, state, overdue });
     }
     return out.sort((x, y) => (x.due_by < y.due_by ? -1 : x.due_by > y.due_by ? 1 : x.order - y.order));
   }
   async function loadWeekPlan(userId) {
     if (!Engine.flag || !Engine.flag('week_plan')) return [];
     const today = todayStr();
-    const { data, error } = await sb.from('wc_assignments').select('id, kind_id, set_id, due_by, plan_order, reason_codes, created_at, status')
+    const { data, error } = await sb.from('wc_assignments').select('id, kind_id, set_id, target_type, target_id, due_by, plan_order, reason_codes, created_at, status')
       .eq('user_id', userId).eq('status', 'planned').eq('made_by_kind', 'human').gte('due_by', addDays(today, -7)).lte('due_by', addDays(today, 10)).order('due_by');
     if (error) { Engine.reportError && Engine.reportError('wc_assignments.select', error); return []; }
     return data || [];
   }
+  const TEST_DAY = '2026-12-12';   // next real sitting; the card counts down to it
+  const testLabel = (today) => { const days = Math.round((new Date(TEST_DAY + 'T12:00:00') - new Date(today + 'T12:00:00')) / 864e5); return days > 0 ? `test Sat Dec 12 · ${days} days` : 'test Sat Dec 12'; };
   const dueLabel = (d, today) => d === today ? 'today' : d === addDays(today, 1) ? 'tomorrow' : new Date(d + 'T12:00:00').toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
 
   // ---------- list view ----------
@@ -225,7 +228,7 @@ const Drills = (() => {
     if (plan.length) {
       const nDone = plan.filter(p => p.state === 'done').length;
       const card = el('div', 'card week-plan');
-      card.append(el('h2', null, `📌 This week <span class="drill-lock">${nDone} of ${plan.length} done · test Fri Oct 17</span>`));
+      card.append(el('h2', null, `📌 This week <span class="drill-lock">${nDone} of ${plan.length} done · ${esc(testLabel(today))}</span>`));
       card.append(el('p', 'sub', 'Before every timed set, say the three rules out loud: 90 seconds then move · never blank · answer the question asked. Plus 10 minutes of vocabulary every day.'));
       const ul = el('ul', 'drill-list');
       for (const p of plan) {
