@@ -208,6 +208,31 @@ const Drills = (() => {
   const testLabel = (today) => { const days = Math.round((new Date(TEST_DAY + 'T12:00:00') - new Date(today + 'T12:00:00')) / 864e5); return days > 0 ? `test Sat Dec 12 · ${days} days` : 'test Sat Dec 12'; };
   const dueLabel = (d, today) => d === today ? 'today' : d === addDays(today, 1) ? 'tomorrow' : new Date(d + 'T12:00:00').toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
 
+  // ---------- display groups ----------
+  // Sets keep their original `day` label: it is part of the shipped, hashed content and of the set-version registry.
+  // The list shows them under date-free headers instead. A label not listed here gets a group of its own, after these.
+  const GROUPS = [
+    { title: 'Pacing sets', sub: 'ISEE timing rules · 90-second cap · never blank · answer the question asked', days: ['Pacing · Sept 7–13', 'Pacing · Sept 19–25'] },
+    { title: 'Lessons · Core Concepts', sub: 'Five-question mastery checks · take each one after its lesson', days: ['Lessons · Core Concepts'] },
+    { title: 'Reading · In the Blink of an Eye', sub: 'One chapter at a time · ISEE format', days: ['Reading · In the Blink of an Eye'] },
+    { title: 'Corrections · ISEE practice test #4', sub: 'One fresh question per miss · untimed', days: ['Correction · ISEE #4 (Sept 6)'] },
+    { title: 'September booklet', sub: 'The first week of drills · kept for the record', days: ['Day 1 · Tue Sept 1', 'Day 2 · Wed Sept 2', 'Day 3 · Thu Sept 3', 'Day 4 · Fri Sept 4'], collapsed: true },
+  ];
+  const groupOf = set => GROUPS.find(g => g.days.includes(set.day));
+  const groupTitle = set => groupOf(set)?.title || set.day;
+  function groupSets(sets) {
+    const out = GROUPS.map(g => ({ ...g, sets: [] }));
+    const extra = new Map();
+    for (const s of sets) {
+      const g = out.find(g => g.days.includes(s.day));
+      if (g) g.sets.push(s);
+      else { if (!extra.has(s.day)) extra.set(s.day, { title: s.day, days: [s.day], sets: [] }); extra.get(s.day).sets.push(s); }
+    }
+    const all = [...out, ...extra.values()].filter(g => g.sets.length);
+    for (const g of all) g.sets.sort((a, b) => (g.days.indexOf(a.day) - g.days.indexOf(b.day)) || (a.order - b.order));
+    return all;
+  }
+
   // ---------- list view ----------
   async function renderList(host) {
     host.innerHTML = '<div class="loading">loading drills…</div>';
@@ -215,8 +240,7 @@ const Drills = (() => {
     await ensureRemote();
     try { runs = await loadRuns(profile.id); } catch (e) { host.innerHTML = `<div class="card"><p class="flag">Could not load drills: ${esc(e.message)}</p></div>`; return; }
     host.innerHTML = '';
-    const byDay = new Map();
-    for (const s of [...D.sets].filter(visible).sort((a, b) => a.order - b.order)) { if (!byDay.has(s.day)) byDay.set(s.day, []); byDay.get(s.day).push(s); }
+    const byGroup = groupSets([...D.sets].filter(visible));
     const intro = el('div', 'card');
     intro.append(el('h2', null, 'Drills'), el('p', 'sub', 'The practice booklet, online. Everything is checked automatically; each miss asks for a one-line error log — <i>what got me</i> — before the set counts as finished.'));
     host.append(intro);
@@ -248,10 +272,15 @@ const Drills = (() => {
       }
       card.append(ul); host.append(card);
     }
-    for (const [day, sets] of byDay) {
-      const card = el('div', 'card');
+    for (const g of byGroup) {
+      const sets = g.sets;
+      const card = el('div', 'card' + (g.collapsed ? ' drill-archive' : ''));
       const open = sets.some(s => available(s, done));
-      card.append(el('h2', null, `${esc(day)}${open ? '' : ' <span class="drill-lock">🔒 opens ' + esc(sets[0].availableFrom) + '</span>'}`));
+      const nDone = sets.filter(s => done.has(s.id)).length;
+      const head = `${esc(g.title)}${open ? '' : ' <span class="drill-lock">🔒 opens ' + esc(sets[0].availableFrom) + '</span>'}${g.collapsed ? ` <span class="drill-lock">${nDone} of ${sets.length} done · tap to open</span>` : ''}`;
+      let body = card;
+      if (g.collapsed) { body = el('details', null, `<summary><h2>${head}</h2>${g.sub ? `<span class="sub">${esc(g.sub)}</span>` : ''}</summary>`); card.append(body); }
+      else { card.append(el('h2', null, head)); if (g.sub) card.append(el('p', 'sub', g.sub)); }
       const ul = el('ul', 'drill-list');
       for (const s of sets) {
         const mine = runs.filter(r => r.set_id === s.id && r.finished_at);
@@ -271,7 +300,7 @@ const Drills = (() => {
         btn.addEventListener('click', () => (best && best.n_wrong && !best.logs_complete) ? reopenLogs(host, s, best) : startSet(host, s));
         right.append(btn); li.append(right); ul.append(li);
       }
-      card.append(ul); host.append(card);
+      body.append(ul); host.append(card);
     }
   }
 
@@ -281,7 +310,7 @@ const Drills = (() => {
     const items = await buildItems(set, profile.id);
     host.innerHTML = '';
     const card = el('div', 'card');
-    card.append(el('div', 'item-kind', esc(set.day)), el('h2', null, esc(set.title)), el('p', 'sub', esc(set.subtitle || '')));
+    card.append(el('div', 'item-kind', esc(groupTitle(set))), el('h2', null, esc(set.title)), el('p', 'sub', esc(set.subtitle || '')));
     if (set.type === 'card') {
       card.append(el('div', 'drill-card-body', set.html));
       const row = el('div', 'center-actions');
@@ -568,7 +597,7 @@ const Drills = (() => {
   function renderResults(host, set, run, results) {
     host.innerHTML = '';
     const card = el('div', 'card');
-    card.append(el('div', 'item-kind', esc(set.day)), el('h2', null, `${esc(set.title)} — ${run.timed_out ? 'time expired' : 'submitted'}`));
+    card.append(el('div', 'item-kind', esc(groupTitle(set))), el('h2', null, `${esc(set.title)} — ${run.timed_out ? 'time expired' : 'submitted'}`));
     const stats = el('div', 'stat-row');
     stats.append(el('div', 'stat', `<b>${run.n_correct}</b><span>correct</span>`), el('div', 'stat', `<b>${run.n_wrong}</b><span>wrong</span>`), el('div', 'stat', `<b>${run.n_blank}</b><span>blank</span>`));
     if (set.scoring === 'ssat') stats.append(el('div', 'stat', `<b>${run.raw_score}</b><span>raw (−¼ per wrong)</span>`));
