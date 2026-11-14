@@ -47,17 +47,17 @@ async function initWith({ nWords = 120, dueIds = [], boxOf = () => 1, flags = { 
   return { Engine, client };
 }
 
-test('review-first: 84 due words → 14 reviews, highest box first, no new words', async () => {
+test('review-first: 84 due words → 14 reviews, highest box first, plus newPerDay new words', async () => {
   const due = Array.from({ length: 84 }, (_, i) => i + 1);
   const { Engine } = await initWith({ dueIds: due, boxOf: id => (id <= 18 ? 3 : id <= 34 ? 2 : id <= 73 ? 1 : 0) });
   const pick = Engine._pickSessionWords();
   assert.equal(pick.policy, 'review_first');
   assert.equal(pick.reviews.length, 14);
-  assert.equal(pick.newWords.length, 0);
+  assert.equal(pick.newWords.length, 4, 'the due pile no longer blocks new words');
   assert.ok(pick.reviews.every(w => w.id <= 18), 'the 14 reviews are all box-3 words');
   assert.equal(pick.nDue, 84);
   const session = Engine.buildSession();
-  assert.equal(session.items.filter(i => i.kind === 'flashcard').length, 14);
+  assert.equal(session.items.filter(i => i.kind === 'flashcard').length, 18, '14 reviews + 4 new words');
 });
 
 test('review-first: 5 due words → 5 reviews plus 4 new deck words', async () => {
@@ -69,11 +69,15 @@ test('review-first: 5 due words → 5 reviews plus 4 new deck words', async () =
   assert.ok(pick.newWords.every(w => deck.words.includes(w.word)), 'deck words jump the queue');
 });
 
-test('review-first: exactly 10 due → no new words; 9 due → new words admitted', async () => {
-  const a = await initWith({ dueIds: Array.from({ length: 10 }, (_, i) => i + 1) });
-  assert.equal(a.Engine._pickSessionWords().newWords.length, 0);
+test('review-first: new words are admitted at any due count, and reviews are capped at 14', async () => {
+  const a = await initWith({ dueIds: Array.from({ length: 60 }, (_, i) => i + 1) });
+  const pa = a.Engine._pickSessionWords();
+  assert.equal(pa.reviews.length, 14);
+  assert.equal(pa.newWords.length, 4);
   const b = await initWith({ dueIds: Array.from({ length: 9 }, (_, i) => i + 1) });
-  assert.ok(b.Engine._pickSessionWords().newWords.length > 0);
+  const pb = b.Engine._pickSessionWords();
+  assert.equal(pb.reviews.length, 9);
+  assert.equal(pb.newWords.length, 4);
 });
 
 test('flag off: legacy composition (6 oldest-due reviews + up to newPerDay new)', async () => {

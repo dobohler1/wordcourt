@@ -214,8 +214,8 @@ const Drills = (() => {
   const GROUPS = [
     { title: 'Pacing sets', sub: 'ISEE timing rules · 90-second cap · never blank · answer the question asked', days: ['Pacing · Sept 7–13', 'Pacing · Sept 19–25'] },
     { title: 'Lessons · Core Concepts', sub: 'Five-question mastery checks · take each one after its lesson', days: ['Lessons · Core Concepts'] },
-    { title: 'Reading · In the Blink of an Eye', sub: 'One chapter at a time · ISEE format', days: ['Reading · In the Blink of an Eye'] },
-    { title: 'Corrections · ISEE practice test #4', sub: 'One fresh question per miss · untimed', days: ['Correction · ISEE #4 (Sept 6)'] },
+    { title: 'Reading · In the Blink of an Eye', sub: 'One chapter at a time · ISEE format · optional', days: ['Reading · In the Blink of an Eye'], collapsed: true },
+    { title: 'Corrections · ISEE practice test #4', sub: 'One fresh question per miss · untimed · done in September', days: ['Correction · ISEE #4 (Sept 6)'], collapsed: true },
     { title: 'September booklet', sub: 'The first week of drills · kept for the record', days: ['Day 1 · Tue Sept 1', 'Day 2 · Wed Sept 2', 'Day 3 · Thu Sept 3', 'Day 4 · Fri Sept 4'], collapsed: true },
   ];
   const groupOf = set => GROUPS.find(g => g.days.includes(set.day));

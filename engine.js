@@ -225,16 +225,17 @@ const Engine = (() => {
   // ---------- session assembly ----------
   // Which words go into today's cards. Two policies:
   //  legacy:       6 oldest-due reviews + up to newPerDay new words (session grows a little while the deck has words left)
-  //  review-first: up to 14 due reviews, highest box first; new words only when fewer than 10 are due  (flag vocab_review_first)
-  const REVIEW_FIRST = { cardCap: 14, newWordsOnlyBelowDue: 10 };
+  //  review-first: up to 14 due reviews, highest box first, then the deck's newPerDay new words every session  (flag vocab_review_first)
+  //  (Until Nov 14 new words were admitted only when fewer than 10 were due. DJ's due pile never fell below 57, so no new
+  //   word was shown between Sept 20 and Nov 14 while synonyms were the weakest line on the real test. Reviews still come first.)
+  const REVIEW_FIRST = { reviewCap: 14 };
   function pickSessionWords() {
     const deckOn = deckRemaining() > 0;
     if (flag('vocab_review_first')) {
       const nDue = dueCount();
-      const reviews = dueReviews(REVIEW_FIRST.cardCap, 'box');
-      const perDay = deckOn ? (deck.newPerDay || T.newWordsMax) : T.newWordsMax;
-      const newMax = nDue < REVIEW_FIRST.newWordsOnlyBelowDue ? Math.max(0, Math.min(perDay, REVIEW_FIRST.cardCap - reviews.length)) : 0;
-      return { reviews, newWords: newMax ? newWordCandidates(newMax) : [], policy: 'review_first', nDue };
+      const reviews = dueReviews(REVIEW_FIRST.reviewCap, 'box');
+      const newMax = (deck && deck.newPerDay) || T.newWordsMax;   // deck words rank first in newWordCandidates; bank words follow once the deck is used up
+      return { reviews, newWords: newWordCandidates(newMax), policy: 'review_first', nDue };
     }
     const newMax = deckOn ? (deck.newPerDay || T.newWordsMax) : T.newWordsMax;
     const wordBudget = T.wordItemsPerSession + (deckOn ? Math.max(0, newMax - T.newWordsMax + 2) : 0);
