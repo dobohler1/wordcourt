@@ -234,6 +234,52 @@ const Drills = (() => {
     return all;
   }
 
+  // ---------- today card: a one-day agenda (D.today), numbered, with the next step highlighted ----------
+  function todayCard(host, tp, runs, done, today) {
+    const card = el('div', 'card today-plan');
+    const lsKey = k => `wc_today_${tp.date}_${profile.id}_${k}`;
+    const ticked = k => { try { return localStorage.getItem(lsKey(k)) === '1'; } catch (e) { return false; } };
+    const state = st => {
+      if (st.done) return { done: true };
+      if (st.set) {
+        const mine = runs.filter(r => r.set_id === st.set && r.finished_at && (r.local_day || String(r.finished_at).slice(0, 10)) === today);
+        const r = mine[0];
+        if (!r) return { done: false };
+        const pending = r.n_wrong && !r.logs_complete;
+        return { done: !pending, pending, run: r };
+      }
+      return { done: ticked(st.key) };
+    };
+    const states = tp.steps.map(state);
+    const nextIdx = states.findIndex((s, i) => !s.done && !tp.steps[i].optional);
+    const total = tp.steps.filter(s => !s.optional).reduce((n, s) => n + (s.minutes || 0), 0);
+    const nDone = states.filter((s, i) => s.done && !tp.steps[i].optional).length, nReq = tp.steps.filter(s => !s.optional).length;
+    card.append(el('h2', null, `${esc(tp.title)} <span class="drill-lock">${nDone} of ${nReq} done · about ${total} min</span>`));
+    if (tp.sub) card.append(el('p', 'sub', esc(tp.sub)));
+    const ol = el('ol', 'today-steps');
+    tp.steps.forEach((st, i) => {
+      const s = states[i], set = st.set ? setById(st.set) : null;
+      const li = el('li', (s.done ? 'today-done' : '') + (i === nextIdx ? ' today-next' : ''));
+      const score = s.run && set && set.type !== 'card' ? ` · ${s.run.n_correct}/${s.run.n_items}` : '';
+      li.append(el('div', 'today-num', s.done ? '✓' : String(i + 1)));
+      li.append(el('div', 'today-body', `<b>${esc(st.label)}</b>${i === nextIdx ? ' <span class="today-now">do this now</span>' : ''}<span class="today-min">${st.optional ? 'optional · ' : ''}${st.minutes} min${esc(score)}</span><div class="drill-sub">${esc(st.detail || '')}</div>`));
+      const right = el('div', 'drill-right');
+      if (set && !s.done) {
+        const btn = el('button', 'btn small-btn' + (i === nextIdx ? ' primary' : ''), s.pending ? 'Finish log' : (set.type === 'card' ? 'Read' : 'Start'));
+        btn.disabled = !available(set, done);
+        btn.addEventListener('click', () => s.pending ? reopenLogs(host, set, s.run) : startSet(host, set));
+        right.append(btn);
+      } else if (st.key && !s.done) {
+        const btn = el('button', 'btn small-btn' + (i === nextIdx ? ' primary' : ''), 'Mark done');
+        btn.addEventListener('click', () => { try { localStorage.setItem(lsKey(st.key), '1'); } catch (e) {} renderList(host); });
+        right.append(btn);
+      }
+      li.append(right); ol.append(li);
+    });
+    card.append(ol);
+    return card;
+  }
+
   // ---------- list view ----------
   async function renderList(host) {
     host.innerHTML = '<div class="loading">loading drills…</div>';
@@ -247,10 +293,13 @@ const Drills = (() => {
     host.append(intro);
     const done = new Set(runs.filter(r => r.finished_at).map(r => r.set_id));
     const today = todayStr();
+    const tp = D.today && today >= D.today.date && today <= (D.today.through || D.today.date) ? D.today : null;
+    if (tp) host.append(todayCard(host, tp, runs, done, today));
     let plan = [];
     try { plan = weekPlanStatus(await loadWeekPlan(profile.id), runs, today); } catch (e) { plan = []; }
     const planBySet = new Map();
-    if (plan.length) {
+    for (const p of plan) if (p.set_id && !planBySet.has(p.set_id)) planBySet.set(p.set_id, p);
+    if (plan.length && !tp) {   // on a day with its own agenda, the agenda replaces the week card
       const nDone = plan.filter(p => p.state === 'done').length;
       const card = el('div', 'card week-plan');
       card.append(el('h2', null, `📌 This week <span class="drill-lock">${nDone} of ${plan.length} done · ${esc(testLabel(today))}</span>`));

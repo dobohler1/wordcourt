@@ -158,6 +158,16 @@ main { max-width: 40rem; margin: 0 auto; padding: 1.25rem 1rem 4rem; }
 .drill-lock { font-size: .8rem; color: var(--muted); font-weight: 400; margin-left: .5rem; }
 .drill-week { font-size: .74rem; border-radius: 999px; padding: .1rem .5rem; margin-left: .4rem; background: rgba(255,209,102,.18); color: var(--gold); white-space: nowrap; }
 .week-plan { border: 1px solid rgba(255,209,102,.35); }
+.today-plan { border: 2px solid var(--accent); }
+.today-steps { list-style: none; margin: .4rem 0 0; padding: 0; }
+.today-steps li { display: flex; align-items: flex-start; gap: .75rem; padding: .7rem .5rem; border-top: 1px solid var(--line); border-radius: 8px; }
+.today-steps li.today-done { opacity: .5; }
+.today-steps li.today-next { background: rgba(255,209,102,.10); outline: 1px solid rgba(255,209,102,.45); }
+.today-num { flex: 0 0 1.8rem; height: 1.8rem; border-radius: 50%; background: var(--panel2); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: .9rem; }
+.today-done .today-num { background: rgba(111,206,126,.2); color: var(--good); }
+.today-body { flex: 1; min-width: 0; }
+.today-min { color: var(--muted); font-size: .8rem; margin-left: .5rem; white-space: nowrap; }
+.today-now { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; border-radius: 999px; padding: .1rem .5rem; margin-left: .35rem; background: var(--gold); color: #1a1a1a; white-space: nowrap; }
 .week-plan li.week-done { opacity: .55; }
 .drill-archive summary { cursor: pointer; list-style: none; }
 .drill-archive summary::-webkit-details-marker { display: none; }
