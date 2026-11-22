@@ -212,6 +212,7 @@ const Drills = (() => {
   // Sets keep their original `day` label: it is part of the shipped, hashed content and of the set-version registry.
   // The list shows them under date-free headers instead. A label not listed here gets a group of its own, after these.
   const GROUPS = [
+    { title: 'Verbal · timed sets', sub: 'ISEE rules · 30 seconds a question · same care on the last question as the first · never blank', days: ['Verbal · timed sets'] },
     { title: 'Pacing sets', sub: 'ISEE timing rules · 90-second cap · never blank · answer the question asked', days: ['Pacing · Sept 7–13', 'Pacing · Sept 19–25'] },
     { title: 'Lessons · Core Concepts', sub: 'Five-question mastery checks · take each one after its lesson', days: ['Lessons · Core Concepts'] },
     { title: 'Reading · In the Blink of an Eye', sub: 'One chapter at a time · ISEE format · optional', days: ['Reading · In the Blink of an Eye'], collapsed: true },
