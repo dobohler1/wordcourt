@@ -220,6 +220,12 @@ main { max-width: 40rem; margin: 0 auto; padding: 1.25rem 1rem 4rem; }
 .drill-result.bad .drill-n { color: var(--bad); }
 .drill-result.blank .drill-n { color: var(--muted); }
 .drill-ans { font-size: .92rem; color: var(--muted); margin-bottom: .35rem; }
+.drill-choices { list-style: none; margin: 0 0 .5rem; padding: 0; font-size: .95rem; }
+.drill-choices li { padding: .2rem .5rem; border-radius: 6px; }
+.drill-choices li b { display: inline-block; width: 1.3rem; color: var(--muted); }
+.drill-choices li.key { outline: 1px solid #3fa76a; }
+.drill-choices li.pick { outline: 1px solid #c8574f; }
+.drill-choices .tag { font-size: .72rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-left: .4rem; }
 .drill-explain { font-size: .92rem; background: var(--panel2); border-radius: 8px; padding: .6rem .8rem; }
 .drill-card-body h4 { margin: 1rem 0 .3rem; font-size: .8rem; text-transform: uppercase; letter-spacing: .08em; color: var(--accent); }
 .drill-card-body ul { margin: .2rem 0 .4rem 1.2rem; padding: 0; }

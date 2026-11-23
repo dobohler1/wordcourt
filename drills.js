@@ -676,6 +676,12 @@ const Drills = (() => {
       node.append(el('div', 'drill-q', `<span class="drill-n">${mark} ${i + 1}.</span> ${promptHtml(it)}`));
       // the dwell readout stays a pacing-set feature on screen; dwell is stored for every set
       const dwell = set.paceCapS && r.dwell_ms != null ? ` · <span class="${r.over_cap ? 'pace-over' : 'dim'}">⏱ ${fmtClock(Math.round(r.dwell_ms / 1000))}${r.over_cap ? ' — over the cap' : ''}</span>` : '';
+      // the letter alone says nothing on the log screen: show every choice, with the pick and the key marked
+      if (Array.isArray(it.choices) && it.choices.length && r.correct !== true) {
+        const ul = el('ul', 'drill-choices');
+        for (const [L, text] of it.choices) ul.append(el('li', L === right ? 'key' : (L === r.chosen ? 'pick' : ''), `<b>${esc(L)}</b> ${text}${L === right ? ' <span class="tag">correct</span>' : ''}${L === r.chosen ? ' <span class="tag">your answer</span>' : ''}`));
+        node.append(ul);
+      }
       node.append(el('div', 'drill-ans', `Your answer: <b>${esc(yours)}</b>${r.correct === true ? '' : ` · Correct: <b>${esc(right)}</b>`}${dwell}`));
       if (it.explain && (r.correct !== true || it.type === 'numeric')) node.append(el('div', 'drill-explain', it.explain));
       if (r.correct === false) {
